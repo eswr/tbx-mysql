@@ -5,7 +5,14 @@ from typing import Protocol
 from pydantic import BaseModel
 
 from app.schemas.financial_query import (
-    Aggregation, ComparisonSpec, DateRange, FinancialQuery, GroupByDimension, Intent, Metric, QueryFilters,
+    Aggregation,
+    ComparisonSpec,
+    DateRange,
+    FinancialQuery,
+    GroupByDimension,
+    Intent,
+    Metric,
+    QueryFilters,
 )
 
 

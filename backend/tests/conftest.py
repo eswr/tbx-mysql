@@ -50,7 +50,7 @@ def mysql_available():
             timeout=5,
         )
         return "artha-mysql" in result.stdout.decode()
-    except:
+    except (OSError, subprocess.SubprocessError):
         return False
 
 

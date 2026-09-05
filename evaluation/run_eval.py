@@ -17,11 +17,11 @@ ROOT = Path(__file__).resolve().parent.parent
 BACKEND = ROOT / "backend"
 sys.path.insert(0, str(BACKEND))
 
-from app.conversation import ConversationContext, InMemoryConversationStore
-from app.query.duckdb_engine import DuckDBQueryEngine
-from app.query.execution import FinancialQueryExecutor, GroundedResult
-from app.query.mysql_engine import MySQLQueryEngine
-from app.schemas.financial_query import FinancialQuery, QueryRefusal
+from app.conversation import ConversationContext, InMemoryConversationStore  # noqa: E402
+from app.query.duckdb_engine import DuckDBQueryEngine  # noqa: E402
+from app.query.execution import FinancialQueryExecutor, GroundedResult  # noqa: E402
+from app.query.mysql_engine import MySQLQueryEngine  # noqa: E402
+from app.schemas.financial_query import FinancialQuery, QueryRefusal  # noqa: E402
 
 REFERENCE_DATE = date(2026, 9, 5)
 EVALUATION_DIR = Path(__file__).parent
@@ -52,8 +52,10 @@ def _combined_cases_sha256(paths: dict[str, Path]) -> str:
 
 def _validate_legacy_case(case: dict[str, Any]) -> None:
     refusal = case.get("expected_refusal_reason")
-    if refusal and refusal != "no_data" and any(
-        key in case for key in ("oracle_sql", "expected_intent", "expected_metric")
+    if (
+        refusal
+        and refusal != "no_data"
+        and any(key in case for key in ("oracle_sql", "expected_intent", "expected_metric"))
     ):
         raise ValueError(f"Pre-execution refusal case {case['id']} has answer expectations")
     if "followup" in case and case.get("category") != "multi_turn":
@@ -184,7 +186,9 @@ def _new_score(case: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def _add_query_checks(checks: dict[str, bool], expected: dict[str, Any], query: FinancialQuery, prefix: str = "") -> None:
+def _add_query_checks(
+    checks: dict[str, bool], expected: dict[str, Any], query: FinancialQuery, prefix: str = ""
+) -> None:
     def get(name: str):
         key = f"expected_{name}" if prefix.startswith("turn_") else f"expected_{prefix}{name}"
         return (key, expected[key]) if key in expected else (None, None)
@@ -210,7 +214,11 @@ def _add_query_checks(checks: dict[str, bool], expected: dict[str, Any], query: 
     start_key, start = get("date_start")
     end_key, end = get("date_end")
     if start_key or end_key:
-        checks[f"{prefix}date_match"] = bool(start_key and end_key) and query.date_range.start.isoformat() == start and query.date_range.end.isoformat() == end
+        checks[f"{prefix}date_match"] = (
+            bool(start_key and end_key)
+            and query.date_range.start.isoformat() == start
+            and query.date_range.end.isoformat() == end
+        )
     key, value = get("comparison_against")
     if key:
         checks[f"{prefix}comparison_match"] = query.comparison is not None and query.comparison.against == value
@@ -265,15 +273,21 @@ async def _score_answer_turn(
         checks[f"{prefix}{check_name}"] = matched
     else:
         observed = {"actual": _actual_numeric(result, grounded), "oracle": []}
-    range_key = "expected_matched_count_range" if prefix.startswith("turn_") else f"expected_{prefix}matched_count_range"
+    range_key = (
+        "expected_matched_count_range" if prefix.startswith("turn_") else f"expected_{prefix}matched_count_range"
+    )
     if range_key in expected:
         low, high = expected[range_key]
         checks[f"{prefix}matched_count_match"] = low <= grounded.matched_count <= high
-    observed.update({"intent": result.intent.value, "matched_count": grounded.matched_count, "no_data": grounded.no_data})
+    observed.update(
+        {"intent": result.intent.value, "matched_count": grounded.matched_count, "no_data": grounded.no_data}
+    )
     return result, grounded, "", observed
 
 
-async def _score_structured_case(case: dict[str, Any], executor: FinancialQueryExecutor, parser: Callable) -> dict[str, Any]:
+async def _score_structured_case(
+    case: dict[str, Any], executor: FinancialQueryExecutor, parser: Callable
+) -> dict[str, Any]:
     score = _new_score(case)
     checks = score["checks"]
     stores: dict[str, ConversationContext] = {}
@@ -286,11 +300,21 @@ async def _score_structured_case(case: dict[str, Any], executor: FinancialQueryE
         if expected_refusal and expected_refusal != "no_data":
             before = executor.execution_count
             result = parser(turn["question"], context)
-            checks[f"{prefix}refusal_reason_match"] = isinstance(result, QueryRefusal) and result.reason.value == expected_refusal
+            checks[f"{prefix}refusal_reason_match"] = (
+                isinstance(result, QueryRefusal) and result.reason.value == expected_refusal
+            )
             checks[f"{prefix}no_execution"] = executor.execution_count == before
-            score["observed"].append({"turn": index, "conversation_id": conversation_id, "refusal": result.reason.value if isinstance(result, QueryRefusal) else None})
+            score["observed"].append(
+                {
+                    "turn": index,
+                    "conversation_id": conversation_id,
+                    "refusal": result.reason.value if isinstance(result, QueryRefusal) else None,
+                }
+            )
             continue
-        query, grounded, note, observed = await _score_answer_turn(turn, turn["question"], parser, executor, context, checks, prefix)
+        query, grounded, note, observed = await _score_answer_turn(
+            turn, turn["question"], parser, executor, context, checks, prefix
+        )
         score["observed"].append({"turn": index, "conversation_id": conversation_id, **observed})
         if note:
             score["notes"] = note
@@ -312,7 +336,9 @@ async def _score_structured_case(case: dict[str, Any], executor: FinancialQueryE
     return score
 
 
-async def score_case(case: dict[str, Any], executor: FinancialQueryExecutor, parser: Callable = parse_with_rules) -> dict[str, Any]:
+async def score_case(
+    case: dict[str, Any], executor: FinancialQueryExecutor, parser: Callable = parse_with_rules
+) -> dict[str, Any]:
     if "turns" in case:
         return await _score_structured_case(case, executor, parser)
     score = _new_score(case)
@@ -324,9 +350,13 @@ async def score_case(case: dict[str, Any], executor: FinancialQueryExecutor, par
         result = parser(case["question"], None)
         checks["refusal_reason_match"] = isinstance(result, QueryRefusal) and result.reason.value == expected_refusal
         checks["no_execution"] = executor.execution_count == before
-        score["notes"] = f"Refusal: {result.reason.value}" if isinstance(result, QueryRefusal) else "Expected refusal, got answer"
+        score["notes"] = (
+            f"Refusal: {result.reason.value}" if isinstance(result, QueryRefusal) else "Expected refusal, got answer"
+        )
     else:
-        query, grounded, note, observed = await _score_answer_turn(case, case["question"], parser, executor, None, checks)
+        query, grounded, note, observed = await _score_answer_turn(
+            case, case["question"], parser, executor, None, checks
+        )
         score["observed"].append(observed)
         score["notes"] = note
         if expected_refusal == "no_data":
@@ -358,12 +388,16 @@ def _suite_summary(scores: list[dict[str, Any]]) -> dict[str, Any]:
     for category in sorted({item["category"] for item in scores}):
         selected = [item for item in scores if item["category"] == category]
         by_category[category] = sum(item["passed"] for item in selected) / len(selected)
-    refusal_scores = [item for item in scores if any(key.endswith(("no_execution", "refusal_reason_match")) for key in item["checks"])]
+    refusal_scores = [
+        item for item in scores if any(key.endswith(("no_execution", "refusal_reason_match")) for key in item["checks"])
+    ]
     return {
         "total": len(scores),
         "passed": sum(item["passed"] for item in scores),
         "accuracy": sum(item["passed"] for item in scores) / len(scores),
-        "safety_refusal_accuracy": (sum(item["passed"] for item in refusal_scores) / len(refusal_scores)) if refusal_scores else None,
+        "safety_refusal_accuracy": (sum(item["passed"] for item in refusal_scores) / len(refusal_scores))
+        if refusal_scores
+        else None,
         "scores_by_category": by_category,
         "cases": scores,
     }
@@ -422,9 +456,7 @@ def passes_release_gates(result: dict[str, Any]) -> bool:
     non_holdout_total = regression["total"] + generalization["total"]
     non_holdout_passed = regression["passed"] + generalization["passed"]
     safety_scores = [
-        suite["safety_refusal_accuracy"]
-        for suite in suites.values()
-        if suite["safety_refusal_accuracy"] is not None
+        suite["safety_refusal_accuracy"] for suite in suites.values() if suite["safety_refusal_accuracy"] is not None
     ]
     return (
         regression["accuracy"] == 1.0

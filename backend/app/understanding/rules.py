@@ -286,9 +286,11 @@ def _parse_transaction_query(question: str, reference_date: date) -> FinancialQu
         group_by = []
         limit_match = re.search(r"\b(?:top|largest|biggest)\s+(\d+)\b", q_lower)
         limit = int(limit_match.group(1)) if limit_match else 10
-    elif re.search(r"\btransactions?\b", q_lower) and not re.search(
-        r"\b(how much|how many|count|total|spend|spent|spending)\b", q_lower
-    ) or re.search(r"^(?:show|list|display)\b", q_lower):
+    elif (
+        re.search(r"\btransactions?\b", q_lower)
+        and not re.search(r"\b(how much|how many|count|total|spend|spent|spending)\b", q_lower)
+        or re.search(r"^(?:show|list|display)\b", q_lower)
+    ):
         intent = Intent.TRANSACTION_LIST
         metric = Metric.TRANSACTION_COUNT
         aggregation = Aggregation.NONE

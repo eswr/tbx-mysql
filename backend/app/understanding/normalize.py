@@ -97,9 +97,17 @@ def normalize_llm_output(
         return mk_refusal(QueryRefusalReason.INVALID_STRUCTURE, "Model response must be a JSON object.")
 
     allowed_fields = {
-        "intent", "metric", "aggregation", "filters",
-        "date_range_type", "month", "year", "group_by", "limit",
-        "comparison", "refusal"
+        "intent",
+        "metric",
+        "aggregation",
+        "filters",
+        "date_range_type",
+        "month",
+        "year",
+        "group_by",
+        "limit",
+        "comparison",
+        "refusal",
     }
     extra_fields = set(llm_json) - allowed_fields
     if extra_fields:
@@ -124,7 +132,8 @@ def normalize_llm_output(
     date_range_type = llm_json.get("date_range_type")
 
     missing = [
-        field for field in ("intent", "metric", "aggregation", "filters", "date_range_type", "group_by")
+        field
+        for field in ("intent", "metric", "aggregation", "filters", "date_range_type", "group_by")
         if field not in llm_json
     ]
     if missing:
@@ -138,10 +147,7 @@ def normalize_llm_output(
         intent_enum = Intent(intent)
     except (ValueError, KeyError, TypeError):
         logger.warning(f"Unknown intent: {intent}")
-        return mk_refusal(
-            QueryRefusalReason.INVALID_STRUCTURE,
-            f"Unknown intent: {intent}"
-        )
+        return mk_refusal(QueryRefusalReason.INVALID_STRUCTURE, f"Unknown intent: {intent}")
 
     if intent_enum not in active_capabilities.intents:
         return mk_refusal(
@@ -153,28 +159,19 @@ def normalize_llm_output(
         metric_enum = Metric(metric)
     except (ValueError, KeyError, TypeError):
         logger.warning(f"Unknown metric: {metric}")
-        return mk_refusal(
-            QueryRefusalReason.INVALID_STRUCTURE,
-            f"Unknown metric: {metric}"
-        )
+        return mk_refusal(QueryRefusalReason.INVALID_STRUCTURE, f"Unknown metric: {metric}")
 
     try:
         aggregation_enum = Aggregation(aggregation)
     except (ValueError, KeyError, TypeError):
         logger.warning(f"Unknown aggregation: {aggregation}")
-        return mk_refusal(
-            QueryRefusalReason.INVALID_STRUCTURE,
-            f"Unknown aggregation: {aggregation}"
-        )
+        return mk_refusal(QueryRefusalReason.INVALID_STRUCTURE, f"Unknown aggregation: {aggregation}")
 
     try:
         date_range_type_enum = DateRangeType(date_range_type)
     except (ValueError, KeyError, TypeError):
         logger.warning(f"Unknown date_range_type: {date_range_type}")
-        return mk_refusal(
-            QueryRefusalReason.INVALID_STRUCTURE,
-            f"Unknown date_range_type: {date_range_type}"
-        )
+        return mk_refusal(QueryRefusalReason.INVALID_STRUCTURE, f"Unknown date_range_type: {date_range_type}")
 
     # Step 5: Date range resolution
     try:
@@ -188,12 +185,7 @@ def normalize_llm_output(
             raise ValueError("month and year are only valid for calendar_month")
         if date_range_type_enum == DateRangeType.CALENDAR_MONTH and month is None and year is not None:
             raise ValueError("year cannot be supplied without month")
-        date_range = resolve_date_range(
-            date_range_type_enum,
-            context_date=reference_date,
-            month=month,
-            year=year
-        )
+        date_range = resolve_date_range(date_range_type_enum, context_date=reference_date, month=month, year=year)
     except Exception as e:
         logger.warning(f"Failed to resolve date range: {e}")
         return mk_refusal(QueryRefusalReason.INVALID_STRUCTURE, f"Could not resolve date range: {str(e)}")
@@ -205,9 +197,7 @@ def normalize_llm_output(
         return filters
 
     # Step 7: Safety checks (on all extracted values)
-    safety_check = _perform_safety_checks(
-        intent_enum, metric_enum, aggregation_enum, filters, date_range_type_enum
-    )
+    safety_check = _perform_safety_checks(intent_enum, metric_enum, aggregation_enum, filters, date_range_type_enum)
     if safety_check is not None:
         return safety_check
 
@@ -256,19 +246,13 @@ def normalize_llm_output(
         return query
     except Exception as e:
         logger.warning(f"FinancialQuery construction failed: {e}")
-        return mk_refusal(
-            QueryRefusalReason.INVALID_STRUCTURE,
-            f"Query validation failed: {str(e)}"
-        )
+        return mk_refusal(QueryRefusalReason.INVALID_STRUCTURE, f"Query validation failed: {str(e)}")
 
 
 def _validate_and_return_refusal(refusal_dict: Any) -> QueryRefusal:
     """Validate refusal structure and return QueryRefusal."""
     if not isinstance(refusal_dict, dict):
-        return mk_refusal(
-            QueryRefusalReason.INVALID_STRUCTURE,
-            "Refusal must be an object."
-        )
+        return mk_refusal(QueryRefusalReason.INVALID_STRUCTURE, "Refusal must be an object.")
 
     if set(refusal_dict) != {"reason", "message"}:
         return mk_refusal(
@@ -280,19 +264,13 @@ def _validate_and_return_refusal(refusal_dict: Any) -> QueryRefusal:
     message = refusal_dict.get("message")
 
     if not reason or not message:
-        return mk_refusal(
-            QueryRefusalReason.INVALID_STRUCTURE,
-            "Refusal must have reason and message."
-        )
+        return mk_refusal(QueryRefusalReason.INVALID_STRUCTURE, "Refusal must have reason and message.")
 
     try:
         reason_enum = QueryRefusalReason(reason)
     except (ValueError, KeyError, TypeError):
         logger.warning(f"Unknown refusal reason: {reason}")
-        return mk_refusal(
-            QueryRefusalReason.INVALID_STRUCTURE,
-            f"Unknown refusal reason: {reason}"
-        )
+        return mk_refusal(QueryRefusalReason.INVALID_STRUCTURE, f"Unknown refusal reason: {reason}")
 
     if not isinstance(message, str) or not message.strip():
         return mk_refusal(QueryRefusalReason.INVALID_STRUCTURE, "Refusal message must be a non-empty string.")
@@ -309,10 +287,7 @@ def _coerce_filters(filters_raw: Any, active_filters: frozenset[str]) -> QueryFi
         QueryRefusal if unsafe or malformed
     """
     if not isinstance(filters_raw, dict):
-        return mk_refusal(
-            QueryRefusalReason.INVALID_STRUCTURE,
-            "Filters must be an object."
-        )
+        return mk_refusal(QueryRefusalReason.INVALID_STRUCTURE, "Filters must be an object.")
 
     unknown = set(filters_raw) - set(QueryFilters.model_fields)
     if unknown:
@@ -338,10 +313,7 @@ def _coerce_filters(filters_raw: Any, active_filters: frozenset[str]) -> QueryFi
         bank_code_str = bank_code.strip()
         if bank_code_str and _is_unsafe_identifier(bank_code_str):
             logger.error(f"Unsafe bank_code detected: {bank_code_str}")
-            return mk_refusal(
-                QueryRefusalReason.INVALID_STRUCTURE,
-                "Invalid bank code."
-            )
+            return mk_refusal(QueryRefusalReason.INVALID_STRUCTURE, "Invalid bank code.")
         coerced["bank_code"] = bank_code_str
 
     # bank_name
@@ -352,10 +324,7 @@ def _coerce_filters(filters_raw: Any, active_filters: frozenset[str]) -> QueryFi
         bank_name_str = bank_name.strip()
         if bank_name_str and _is_unsafe_text(bank_name_str):
             logger.error(f"Unsafe bank_name detected: {bank_name_str}")
-            return mk_refusal(
-                QueryRefusalReason.INVALID_STRUCTURE,
-                "Invalid bank name."
-            )
+            return mk_refusal(QueryRefusalReason.INVALID_STRUCTURE, "Invalid bank name.")
         coerced["bank_name"] = bank_name_str
 
     # account_id
@@ -366,10 +335,7 @@ def _coerce_filters(filters_raw: Any, active_filters: frozenset[str]) -> QueryFi
         account_id_str = account_id.strip()
         if account_id_str and _is_unsafe_identifier(account_id_str):
             logger.error(f"Unsafe account_id detected: {account_id_str}")
-            return mk_refusal(
-                QueryRefusalReason.INVALID_STRUCTURE,
-                "Invalid account ID."
-            )
+            return mk_refusal(QueryRefusalReason.INVALID_STRUCTURE, "Invalid account ID.")
         coerced["account_id"] = account_id_str
 
     # transaction_type
@@ -378,8 +344,7 @@ def _coerce_filters(filters_raw: Any, active_filters: frozenset[str]) -> QueryFi
         if txn_type not in ("credit", "debit", None):
             logger.warning(f"Invalid transaction_type: {txn_type}")
             return mk_refusal(
-                QueryRefusalReason.INVALID_STRUCTURE,
-                "transaction_type must be 'credit', 'debit', or null."
+                QueryRefusalReason.INVALID_STRUCTURE, "transaction_type must be 'credit', 'debit', or null."
             )
         coerced["transaction_type"] = txn_type
 
@@ -391,10 +356,7 @@ def _coerce_filters(filters_raw: Any, active_filters: frozenset[str]) -> QueryFi
         desc_str = desc.strip()
         if desc_str and _is_unsafe_text(desc_str):
             logger.error("Unsafe description_contains detected")
-            return mk_refusal(
-                QueryRefusalReason.INVALID_STRUCTURE,
-                "Invalid description filter."
-            )
+            return mk_refusal(QueryRefusalReason.INVALID_STRUCTURE, "Invalid description filter.")
         coerced["description_contains"] = desc_str
 
     # reference_id
@@ -405,10 +367,7 @@ def _coerce_filters(filters_raw: Any, active_filters: frozenset[str]) -> QueryFi
         ref_id_str = ref_id.strip()
         if ref_id_str and _is_unsafe_identifier(ref_id_str):
             logger.error("Unsafe reference_id detected")
-            return mk_refusal(
-                QueryRefusalReason.INVALID_STRUCTURE,
-                "Invalid reference ID."
-            )
+            return mk_refusal(QueryRefusalReason.INVALID_STRUCTURE, "Invalid reference ID.")
         coerced["reference_id"] = ref_id_str
 
     # utr_number
@@ -419,10 +378,7 @@ def _coerce_filters(filters_raw: Any, active_filters: frozenset[str]) -> QueryFi
         utr_str = utr.strip()
         if utr_str and _is_unsafe_identifier(utr_str):
             logger.error("Unsafe utr_number detected")
-            return mk_refusal(
-                QueryRefusalReason.INVALID_STRUCTURE,
-                "Invalid UTR number."
-            )
+            return mk_refusal(QueryRefusalReason.INVALID_STRUCTURE, "Invalid UTR number.")
         coerced["utr_number"] = utr_str
 
     # min_amount
@@ -432,10 +388,7 @@ def _coerce_filters(filters_raw: Any, active_filters: frozenset[str]) -> QueryFi
             coerced["min_amount"] = Decimal(str(min_amt))
         except Exception as e:
             logger.warning(f"Failed to coerce min_amount: {e}")
-            return mk_refusal(
-                QueryRefusalReason.INVALID_STRUCTURE,
-                "min_amount must be a valid number."
-            )
+            return mk_refusal(QueryRefusalReason.INVALID_STRUCTURE, "min_amount must be a valid number.")
 
     # max_amount
     max_amt = filters_raw.get("max_amount")
@@ -444,10 +397,7 @@ def _coerce_filters(filters_raw: Any, active_filters: frozenset[str]) -> QueryFi
             coerced["max_amount"] = Decimal(str(max_amt))
         except Exception as e:
             logger.warning(f"Failed to coerce max_amount: {e}")
-            return mk_refusal(
-                QueryRefusalReason.INVALID_STRUCTURE,
-                "max_amount must be a valid number."
-            )
+            return mk_refusal(QueryRefusalReason.INVALID_STRUCTURE, "max_amount must be a valid number.")
 
     # min_amount_operator and max_amount_operator already have defaults in schema
     min_op = filters_raw.get("min_amount_operator", ">=")
@@ -480,10 +430,7 @@ def _coerce_filters(filters_raw: Any, active_filters: frozenset[str]) -> QueryFi
         return QueryFilters(**coerced)
     except Exception as e:
         logger.warning(f"QueryFilters construction failed: {e}")
-        return mk_refusal(
-            QueryRefusalReason.INVALID_STRUCTURE,
-            f"Filter validation failed: {str(e)}"
-        )
+        return mk_refusal(QueryRefusalReason.INVALID_STRUCTURE, f"Filter validation failed: {str(e)}")
 
 
 def _perform_safety_checks(
@@ -509,17 +456,11 @@ def _perform_safety_checks(
 
         if re.search(SQL_KEYWORDS, value_str, re.IGNORECASE):
             logger.error(f"SQL keyword detected in filter {key}: {value_str[:50]}")
-            return mk_refusal(
-                QueryRefusalReason.INVALID_STRUCTURE,
-                "Query contains unsafe SQL syntax."
-            )
+            return mk_refusal(QueryRefusalReason.INVALID_STRUCTURE, "Query contains unsafe SQL syntax.")
 
         if re.search(INJECTION_PATTERNS, value_str):
             logger.error(f"Injection pattern detected in filter {key}")
-            return mk_refusal(
-                QueryRefusalReason.INVALID_STRUCTURE,
-                "Query contains unsafe syntax."
-            )
+            return mk_refusal(QueryRefusalReason.INVALID_STRUCTURE, "Query contains unsafe syntax.")
 
     return None
 
@@ -531,10 +472,37 @@ def _is_unsafe_identifier(value: str) -> bool:
 
     # Block SQL keywords and reserved words in identifiers
     dangerous_keywords = {
-        "accounts", "schema", "table", "column", "database", "user", "password",
-        "admin", "root", "exec", "execute", "select", "delete", "drop", "insert",
-        "update", "truncate", "union", "where", "from", "join", "or", "and",
-        "--", "/*", "*/", ";", "'", '"', "`", "%"
+        "accounts",
+        "schema",
+        "table",
+        "column",
+        "database",
+        "user",
+        "password",
+        "admin",
+        "root",
+        "exec",
+        "execute",
+        "select",
+        "delete",
+        "drop",
+        "insert",
+        "update",
+        "truncate",
+        "union",
+        "where",
+        "from",
+        "join",
+        "or",
+        "and",
+        "--",
+        "/*",
+        "*/",
+        ";",
+        "'",
+        '"',
+        "`",
+        "%",
     }
 
     value_lower = value.lower()

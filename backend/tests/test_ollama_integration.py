@@ -155,9 +155,10 @@ async def test_rules_miss_with_ollama_disabled_returns_ambiguity(ollama_api_clie
 
 @pytest.mark.asyncio
 async def test_rules_ambiguity_does_not_fall_back_to_ollama(ollama_api_client):
-    with patch("app.main.settings") as settings, patch(
-        "app.understanding.ollama.understand_with_ollama", new_callable=AsyncMock
-    ) as understand:
+    with (
+        patch("app.main.settings") as settings,
+        patch("app.understanding.ollama.understand_with_ollama", new_callable=AsyncMock) as understand,
+    ):
         settings.ARTHA_OLLAMA_ENABLED = True
         response = await ollama_api_client.post("/api/chat", json={"question": "What is your name?"})
     assert response.json()["refusal"]["reason"] == "ambiguous"
@@ -192,9 +193,7 @@ def test_malformed_supplied_fields_fail_closed(mutation):
 
 
 def test_supported_comparison_survives_normalization():
-    result = normalize_llm_output(
-        valid_query(intent="comparison", comparison={"against": "previous_month"})
-    )
+    result = normalize_llm_output(valid_query(intent="comparison", comparison={"against": "previous_month"}))
     assert isinstance(result, FinancialQuery)
     assert result.comparison is not None
     assert result.comparison.against == "previous_month"
@@ -263,7 +262,10 @@ async def test_http_payload_redacts_raw_sensitive_identifiers():
         "account 12345 UTR HDFC202609051234567890 reference REF-9988776655 "
         "PAN ABCDE1234F txn 550e8400-e29b-41d4-a716-446655440000 email person@example.com"
     )
-    with patch("httpx.AsyncClient.post", return_value=ollama_response(json.dumps({"refusal": {"reason": "ambiguous", "message": "Need details"}}))) as post:
+    with patch(
+        "httpx.AsyncClient.post",
+        return_value=ollama_response(json.dumps({"refusal": {"reason": "ambiguous", "message": "Need details"}})),
+    ) as post:
         result = await understand_with_ollama(question, base_url="http://test", model="requested")
     serialized_payload = json.dumps(post.call_args.kwargs["json"])
     assert isinstance(result, OllamaResult)
@@ -347,17 +349,19 @@ async def test_second_turn_rules_miss_succeeds_via_ollama_with_safe_inherited_se
     followup = "Please reprise that same lens, tersely."
     model_json = valid_query()
     captured = {}
-    with patch("app.main.settings") as settings, patch("app.main.understand_question", return_value=None), patch(
-        "app.understanding.ollama.httpx.AsyncClient",
-        fake_ollama_client(ollama_response(json.dumps(model_json)), captured),
+    with (
+        patch("app.main.settings") as settings,
+        patch("app.main.understand_question", return_value=None),
+        patch(
+            "app.understanding.ollama.httpx.AsyncClient",
+            fake_ollama_client(ollama_response(json.dumps(model_json)), captured),
+        ),
     ):
         settings.ARTHA_OLLAMA_ENABLED = True
         settings.ARTHA_OLLAMA_BASE_URL = "http://test"
         settings.ARTHA_OLLAMA_MODEL = "requested"
         settings.ARTHA_OLLAMA_TIMEOUT = 3
-        second = await ollama_api_client.post(
-            "/api/chat", json={"question": followup, "conversation_id": "ctx-ollama"}
-        )
+        second = await ollama_api_client.post("/api/chat", json={"question": followup, "conversation_id": "ctx-ollama"})
 
     body = second.json()
     assert body["interpretation"]["date_range"]["start"] == "2026-08-01"
@@ -376,9 +380,13 @@ async def test_second_turn_rules_miss_succeeds_via_ollama_with_safe_inherited_se
 
 @pytest.mark.asyncio
 async def test_ollama_result_and_api_preserve_all_metadata(ollama_api_client):
-    with patch("app.main.settings") as settings, patch("app.main.understand_question", return_value=None), patch(
-        "app.understanding.ollama.httpx.AsyncClient",
-        fake_ollama_client(ollama_response(json.dumps(valid_query()))),
+    with (
+        patch("app.main.settings") as settings,
+        patch("app.main.understand_question", return_value=None),
+        patch(
+            "app.understanding.ollama.httpx.AsyncClient",
+            fake_ollama_client(ollama_response(json.dumps(valid_query()))),
+        ),
     ):
         settings.ARTHA_OLLAMA_ENABLED = True
         settings.ARTHA_OLLAMA_BASE_URL = "http://test"

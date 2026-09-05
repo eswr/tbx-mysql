@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from app.query.compiler import compile_financial_query
-from app.schemas.financial_query import Aggregation, FinancialQuery, Intent
+from app.schemas.financial_query import Aggregation, FinancialQuery
 
 
 @dataclass

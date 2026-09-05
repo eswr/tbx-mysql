@@ -71,7 +71,10 @@ class FakeEngine:
 async def test_sparse_matched_refusal_passes_without_unrelated_fields():
     engine = FakeEngine()
     executor = FinancialQueryExecutor(engine)
-    parser = lambda question, context: refusal(QueryRefusalReason.AMBIGUOUS, "period required")
+
+    def parser(question, context):
+        return refusal(QueryRefusalReason.AMBIGUOUS, "period required")
+
     result = await score_case(
         {"id": "r", "category": "refusal", "question": "spend?", "expected_refusal_reason": "ambiguous"},
         executor,
@@ -85,7 +88,10 @@ async def test_sparse_matched_refusal_passes_without_unrelated_fields():
 @pytest.mark.asyncio
 async def test_refusal_reason_mismatch_fails():
     executor = FinancialQueryExecutor(FakeEngine())
-    parser = lambda question, context: refusal(QueryRefusalReason.UNSUPPORTED_METRIC, "unsupported")
+
+    def parser(question, context):
+        return refusal(QueryRefusalReason.UNSUPPORTED_METRIC, "unsupported")
+
     result = await score_case(
         {"id": "r", "category": "refusal", "question": "spend?", "expected_refusal_reason": "ambiguous"},
         executor,
@@ -109,7 +115,10 @@ async def test_sparse_correct_query_passes_and_wrong_number_fails():
 async def test_parser_no_data_refusal_fails_without_execution():
     engine = FakeEngine(matched_count=0)
     executor = FinancialQueryExecutor(engine)
-    parser = lambda question, context: refusal(QueryRefusalReason.NO_DATA, "none")
+
+    def parser(question, context):
+        return refusal(QueryRefusalReason.NO_DATA, "none")
+
     result = await score_case(
         {"id": "n", "category": "empty", "question": "details", "expected_refusal_reason": "no_data"}, executor, parser
     )

@@ -5,8 +5,17 @@ from decimal import Decimal
 from datetime import timedelta
 
 from app.schemas.financial_query import (
-    FinancialQuery, Intent, Metric, Aggregation, GroupByDimension,
-    QueryFilters, DateRange, DateRangeType, QueryRefusal, QueryRefusalReason, refusal as mk_refusal,
+    FinancialQuery,
+    Intent,
+    Metric,
+    Aggregation,
+    GroupByDimension,
+    QueryFilters,
+    DateRange,
+    DateRangeType,
+    QueryRefusal,
+    QueryRefusalReason,
+    refusal as mk_refusal,
 )
 from app.understanding.dates import resolve_date_range, today_ist
 
@@ -19,15 +28,16 @@ UNSUPPORTED = [
     (r"\b(forecast|prediction)\b", "forecasts"),
 ]
 
+
 def parse_q(question: str) -> FinancialQuery | QueryRefusal | None:
     """Simple rule-based parser."""
     q = question.lower()
-    
+
     # Unsupported
     for pattern, domain in UNSUPPORTED:
         if re.search(pattern, q):
             return mk_refusal(QueryRefusalReason.UNSUPPORTED_METRIC, f"No {domain} data.")
-    
+
     # Balance
     if re.search(r"\b(balance|my balance|account balance)", q):
         if re.search(r"\b(how much|total)\b", q):
@@ -38,7 +48,7 @@ def parse_q(question: str) -> FinancialQuery | QueryRefusal | None:
                 filters=QueryFilters(),
                 date_range=DateRange(start=today_ist(), end=today_ist() + timedelta(days=1)),
             )
-    
+
     # Count how many accounts
     if re.search(r"\b(how many accounts|accounts per bank)\b", q):
         return FinancialQuery(
@@ -49,7 +59,7 @@ def parse_q(question: str) -> FinancialQuery | QueryRefusal | None:
             date_range=DateRange(start=today_ist(), end=today_ist() + timedelta(days=1)),
             group_by=[GroupByDimension.BANK],
         )
-    
+
     # List accounts
     if re.search(r"\b(my accounts|show.*accounts)\b", q):
         return FinancialQuery(
@@ -60,7 +70,7 @@ def parse_q(question: str) -> FinancialQuery | QueryRefusal | None:
             date_range=DateRange(start=today_ist(), end=today_ist() + timedelta(days=1)),
             limit=25,
         )
-    
+
     # Reference lookup
     if "reference" in q or "ref" in q or "utr" in q:
         match = re.search(r"([A-Za-z0-9]{6,20})", question)
@@ -74,7 +84,7 @@ def parse_q(question: str) -> FinancialQuery | QueryRefusal | None:
                 date_range=DateRange(start=today_ist(), end=today_ist() + timedelta(days=1)),
             )
         return mk_refusal(QueryRefusalReason.AMBIGUOUS, "Need a reference or UTR number.")
-    
+
     # Transaction-related (spend, debits, etc.)
     if re.search(r"\b(spend|spent|spending|debit|received|credit|transaction)\b", q):
         # Infer type
@@ -83,7 +93,7 @@ def parse_q(question: str) -> FinancialQuery | QueryRefusal | None:
             txn_type = "debit"
         elif re.search(r"\b(received|credit|incoming)\b", q):
             txn_type = "credit"
-        
+
         # Metric
         if re.search(r"\b(how many|count)\b", q):
             metric = Metric.TRANSACTION_COUNT
@@ -91,7 +101,7 @@ def parse_q(question: str) -> FinancialQuery | QueryRefusal | None:
         else:
             metric = Metric.TRANSACTION_AMOUNT
             agg = Aggregation.SUM
-        
+
         # Intent
         if re.search(r"\b(show|list|display|find)\b", q):
             intent = Intent.TRANSACTION_LIST
@@ -99,14 +109,16 @@ def parse_q(question: str) -> FinancialQuery | QueryRefusal | None:
             intent = Intent.MONTHLY_TREND
         else:
             intent = Intent.TRANSACTION_SUMMARY
-        
+
         # Date: must have one
         date_spec = _extract_date(q)
         if not date_spec:
-            return mk_refusal(QueryRefusalReason.AMBIGUOUS, "Which period? (e.g., 'August', 'last month', 'last 7 days')")
-        
+            return mk_refusal(
+                QueryRefusalReason.AMBIGUOUS, "Which period? (e.g., 'August', 'last month', 'last 7 days')"
+            )
+
         dr = resolve_date_range(date_spec, today_ist())
-        
+
         # Bank filter
         bank_code = None
         if "hdfc" in q:
@@ -117,23 +129,23 @@ def parse_q(question: str) -> FinancialQuery | QueryRefusal | None:
             bank_code = "SBIN"
         elif re.search(r"\baxis\b", q):
             bank_code = "UTIB"
-        
+
         # Amount thresholds
         min_amount = None
         match = re.search(r"(?:above|over|more than|greater than|> )([\d,]+)", q)
         if match:
             min_amount = Decimal(match.group(1).replace(",", ""))
-        
+
         filters = QueryFilters(
             transaction_type=txn_type,
             bank_code=bank_code,
             min_amount=min_amount,
         )
-        
+
         group_by_list = []
         if intent == Intent.MONTHLY_TREND:
             group_by_list = [GroupByDimension.MONTH]
-        
+
         return FinancialQuery(
             intent=intent,
             metric=metric,
@@ -143,7 +155,7 @@ def parse_q(question: str) -> FinancialQuery | QueryRefusal | None:
             group_by=group_by_list,
             limit=20 if intent == Intent.TRANSACTION_LIST else None,
         )
-    
+
     # Off-topic
     return mk_refusal(QueryRefusalReason.AMBIGUOUS, "Ask about spending, balances, or transactions.")
 

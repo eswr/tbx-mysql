@@ -79,9 +79,7 @@ def capabilities_from_discovery(discovered: Capabilities) -> ActiveQueryCapabili
     transaction_core = {"transaction_date", "transaction_type", "transaction_amount"}
     if "transaction" in tables and transaction_core <= transaction:
         intents.update({Intent.TRANSACTION_SUMMARY, Intent.COMPARISON})
-        filters.update(
-            {"transaction_type", "min_amount", "min_amount_operator", "max_amount", "max_amount_operator"}
-        )
+        filters.update({"transaction_type", "min_amount", "min_amount_operator", "max_amount", "max_amount_operator"})
         if "account_id" in transaction:
             filters.add("account_id")
         if "description" in transaction:
@@ -105,11 +103,7 @@ def capabilities_from_discovery(discovered: Capabilities) -> ActiveQueryCapabili
             intents.add(Intent.TRANSACTION_LIST)
             intents.add(Intent.REFERENCE_LOOKUP)
 
-        if (
-            "account_id" in transaction
-            and "account" in tables
-            and {"account_id", "bank_code"} <= account
-        ):
+        if "account_id" in transaction and "account" in tables and {"account_id", "bank_code"} <= account:
             filters.add("bank_code")
             if "bank" in tables and {"bank_code", "bank_name"} <= bank:
                 filters.add("bank_name")
@@ -144,71 +138,71 @@ def build_query_json_schema(active: ActiveQueryCapabilities) -> dict[str, Any]:
     filter_properties = {key: value for key, value in filter_properties.items() if key in active.filters}
     group_values = sorted(item.value for item in active.group_by)
     properties = {
-            "intent": {"type": "string", "enum": sorted(item.value for item in active.intents)},
-            "metric": {"type": "string", "enum": ["transaction_amount", "transaction_count", "balance"]},
-            "aggregation": {"type": "string", "enum": ["sum", "count", "avg", "max", "min", "none"]},
-            "filters": {"type": "object", "properties": filter_properties, "additionalProperties": False},
-            "date_range_type": {
-                "type": "string",
-                "enum": [
-                    "calendar_month",
-                    "last_n_months",
-                    "all_time",
-                    "month_before_previous",
-                    "this_month",
-                    "this_week",
-                    "last_week",
-                    "last_n_days",
-                    "yesterday",
-                    "today",
-                    "this_year",
-                    "last_year",
-                ],
-            },
-            "month": {"type": ["string", "null"]},
-            "year": {"type": ["integer", "null"]},
-            "group_by": {
-                "type": "array",
-                "items": {"type": "string", "enum": group_values},
-                "maxItems": len(group_values),
-                "uniqueItems": True,
-            },
-            "limit": {"type": ["integer", "null"], "minimum": 1, "maximum": 1000},
-            "comparison": {
-                "anyOf": [
-                    {"type": "null"},
-                    {
-                        "type": "object",
-                        "properties": {"against": {"const": "previous_month"}},
-                        "required": ["against"],
-                        "additionalProperties": False,
-                    },
-                ]
-            },
-            "refusal": {
-                "anyOf": [
-                    {"type": "null"},
-                    {
-                        "type": "object",
-                        "properties": {
-                            "reason": {
-                                "type": "string",
-                                "enum": [
-                                    "unsupported_metric",
-                                    "unsupported_field",
-                                    "ambiguous",
-                                    "invalid_structure",
-                                    "capability",
-                                ],
-                            },
-                            "message": {"type": "string"},
+        "intent": {"type": "string", "enum": sorted(item.value for item in active.intents)},
+        "metric": {"type": "string", "enum": ["transaction_amount", "transaction_count", "balance"]},
+        "aggregation": {"type": "string", "enum": ["sum", "count", "avg", "max", "min", "none"]},
+        "filters": {"type": "object", "properties": filter_properties, "additionalProperties": False},
+        "date_range_type": {
+            "type": "string",
+            "enum": [
+                "calendar_month",
+                "last_n_months",
+                "all_time",
+                "month_before_previous",
+                "this_month",
+                "this_week",
+                "last_week",
+                "last_n_days",
+                "yesterday",
+                "today",
+                "this_year",
+                "last_year",
+            ],
+        },
+        "month": {"type": ["string", "null"]},
+        "year": {"type": ["integer", "null"]},
+        "group_by": {
+            "type": "array",
+            "items": {"type": "string", "enum": group_values},
+            "maxItems": len(group_values),
+            "uniqueItems": True,
+        },
+        "limit": {"type": ["integer", "null"], "minimum": 1, "maximum": 1000},
+        "comparison": {
+            "anyOf": [
+                {"type": "null"},
+                {
+                    "type": "object",
+                    "properties": {"against": {"const": "previous_month"}},
+                    "required": ["against"],
+                    "additionalProperties": False,
+                },
+            ]
+        },
+        "refusal": {
+            "anyOf": [
+                {"type": "null"},
+                {
+                    "type": "object",
+                    "properties": {
+                        "reason": {
+                            "type": "string",
+                            "enum": [
+                                "unsupported_metric",
+                                "unsupported_field",
+                                "ambiguous",
+                                "invalid_structure",
+                                "capability",
+                            ],
                         },
-                        "required": ["reason", "message"],
-                        "additionalProperties": False,
+                        "message": {"type": "string"},
                     },
-                ]
-            },
-        }
+                    "required": ["reason", "message"],
+                    "additionalProperties": False,
+                },
+            ]
+        },
+    }
     query_required = [
         "intent",
         "metric",
@@ -391,7 +385,9 @@ async def understand_with_ollama(
         model = model or settings.ARTHA_OLLAMA_MODEL
 
     assert base_url is not None and model is not None
-    active = capabilities_from_discovery(discovered_capabilities) if discovered_capabilities else DEFAULT_ACTIVE_CAPABILITIES
+    active = (
+        capabilities_from_discovery(discovered_capabilities) if discovered_capabilities else DEFAULT_ACTIVE_CAPABILITIES
+    )
     redacted_question, replacements = redact_sensitive_identifiers(question)
     messages = [{"role": "system", "content": SYSTEM_PROMPT}]
     safe_context = semantic_context(context)
@@ -462,8 +458,12 @@ def _extract_metadata(response_data: dict[str, Any], requested_model: str, laten
     prompt_tokens = response_data.get("prompt_eval_count")
     completion_tokens = response_data.get("eval_count")
     prompt_tokens = prompt_tokens if isinstance(prompt_tokens, int) and not isinstance(prompt_tokens, bool) else None
-    completion_tokens = completion_tokens if isinstance(completion_tokens, int) and not isinstance(completion_tokens, bool) else None
-    total_tokens = prompt_tokens + completion_tokens if prompt_tokens is not None and completion_tokens is not None else None
+    completion_tokens = (
+        completion_tokens if isinstance(completion_tokens, int) and not isinstance(completion_tokens, bool) else None
+    )
+    total_tokens = (
+        prompt_tokens + completion_tokens if prompt_tokens is not None and completion_tokens is not None else None
+    )
     response_model = response_data.get("model")
     return OllamaMetadata(
         model=response_model if isinstance(response_model, str) and response_model else requested_model,

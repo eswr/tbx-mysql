@@ -25,7 +25,9 @@ class MySQLQueryEngine(QueryEngine):
         self.conn_kwargs = self._parse_url(db_url)
         configured_utr_mode = utr_mode or get_settings().ARTHA_UTR_MODE
         self.utr_mode = (
-            configured_utr_mode.value if isinstance(configured_utr_mode, UTRMode) else UTRMode(configured_utr_mode).value
+            configured_utr_mode.value
+            if isinstance(configured_utr_mode, UTRMode)
+            else UTRMode(configured_utr_mode).value
         )
 
     def _parse_url(self, db_url: str) -> dict:
@@ -111,8 +113,8 @@ class MySQLQueryEngine(QueryEngine):
 
                 cursor.execute("SELECT COUNT(*) as cnt FROM `transaction`")
                 caps.transaction_count = cursor.fetchone()["cnt"]
-            except:
-                pass
+            except Exception as e:
+                logger.warning(f"Failed to get counts: {e}")
 
             # Get date range
             try:

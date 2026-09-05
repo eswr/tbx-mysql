@@ -20,12 +20,12 @@ def mask_utr(utr: str | None) -> str | None:
 def mask_record(record: dict) -> dict:
     """Apply masking to a database record."""
     masked = dict(record)
-    
+
     for key in ["account_number", "account_number_masked"]:
         if key in masked and masked[key]:
             masked[key] = mask_account_number(masked[key])
-    
+
     if "utr_number" in masked and masked["utr_number"]:
         masked["utr_number"] = mask_utr(masked["utr_number"])
-    
+
     return masked

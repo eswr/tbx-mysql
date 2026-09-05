@@ -80,8 +80,8 @@ class DuckDBQueryEngine(QueryEngine):
                 ).fetchall()
                 caps.account_count = counts[1][0]
                 # transaction count is separate
-            except:
-                pass
+            except Exception as e:
+                logger.warning(f"Failed to get counts: {e}")
 
             try:
                 date_range = self.conn.execute(
@@ -165,5 +165,5 @@ class DuckDBQueryEngine(QueryEngine):
         try:
             self.conn.execute("SELECT 1").fetchall()
             return True
-        except:
+        except Exception:
             return False

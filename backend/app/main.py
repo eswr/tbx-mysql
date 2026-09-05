@@ -349,7 +349,12 @@ async def chat(
     query_ms = (time.perf_counter() - query_started) * 1000
     conversation_store.put(conv_id, ConversationContext.from_query(parsed))
     return _success_response(
-        conv_id, parsed, result, engine_name, understanding_ms, query_ms,
+        conv_id,
+        parsed,
+        result,
+        engine_name,
+        understanding_ms,
+        query_ms,
         llm_calls=llm_calls,
         ollama_metadata=ollama_metadata,
     )

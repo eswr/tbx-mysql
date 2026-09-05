@@ -10,26 +10,31 @@ from app.schemas.financial_query import FinancialQuery, QueryRefusal, Intent
 def parse_q(question, context=None):
     return understand_question(question, context=context, reference_date=date(2026, 9, 5))
 
+
 def test_spend_august():
     result = parse_q("How much did I spend in August 2026?")
     assert isinstance(result, FinancialQuery)
     assert result.intent == Intent.TRANSACTION_SUMMARY
     assert result.filters.transaction_type == "debit"
 
+
 def test_balance():
     result = parse_q("What's my total balance?")
     assert isinstance(result, FinancialQuery)
     assert result.intent == Intent.ACCOUNT_BALANCE
+
 
 def test_list_transactions():
     result = parse_q("Show me HDFC credit transactions")
     assert isinstance(result, QueryRefusal)
     assert result.reason.value == "ambiguous"
 
+
 def test_unsupported_payroll():
     result = parse_q("How much do my employees earn?")
     assert isinstance(result, QueryRefusal)
     assert result.reason.value == "unsupported_metric"
+
 
 def test_ambiguous_no_date():
     result = parse_q("Show HDFC transactions")
@@ -37,19 +42,22 @@ def test_ambiguous_no_date():
     assert isinstance(result, QueryRefusal)
 
 
-@pytest.mark.parametrize(("phrase", "field", "operator"), [
-    ("above 50000", "min_amount", ">"),
-    ("over 50000", "min_amount", ">"),
-    ("more than 50000", "min_amount", ">"),
-    ("at least 50000", "min_amount", ">="),
-    ("minimum 50000", "min_amount", ">="),
-    ("below 50000", "max_amount", "<"),
-    ("under 50000", "max_amount", "<"),
-    ("less than 50000", "max_amount", "<"),
-    ("at most 50000", "max_amount", "<="),
-    ("no more than 50000", "max_amount", "<="),
-    ("maximum 50000", "max_amount", "<="),
-])
+@pytest.mark.parametrize(
+    ("phrase", "field", "operator"),
+    [
+        ("above 50000", "min_amount", ">"),
+        ("over 50000", "min_amount", ">"),
+        ("more than 50000", "min_amount", ">"),
+        ("at least 50000", "min_amount", ">="),
+        ("minimum 50000", "min_amount", ">="),
+        ("below 50000", "max_amount", "<"),
+        ("under 50000", "max_amount", "<"),
+        ("less than 50000", "max_amount", "<"),
+        ("at most 50000", "max_amount", "<="),
+        ("no more than 50000", "max_amount", "<="),
+        ("maximum 50000", "max_amount", "<="),
+    ],
+)
 def test_amount_operator_language(phrase, field, operator):
     result = parse_q(f"How many transactions {phrase} in August?")
     assert isinstance(result, FinancialQuery)
