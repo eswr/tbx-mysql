@@ -9,7 +9,7 @@ Artha turns supported financial questions into a validated `FinancialQuery`, com
 - `/api/capabilities` reports the schema and semantics discovered from the configured database.
 - SQL is generated only from allowlisted plans and parameters. Transaction evidence is masked before it leaves an engine.
 - The deterministic benchmark contains 101 cases: a locked 26-case regression suite, 55 generalization cases, and a frozen 20-case holdout.
-- The repository is API-only; `frontend/` is currently empty.
+- `frontend/` is a Vite + React + TypeScript + Tailwind chat client for `/api/chat`. It renders the interpretation, the evidence behind each number, and structured refusals as refusals rather than answers.
 
 ## Architecture
 
@@ -207,11 +207,36 @@ Runs capability discovery against the configured database and returns tables, co
 
 Returns `healthy` when MySQL responds to a ping and `degraded` otherwise.
 
+## Frontend
+
+A single-purpose chat client for the grounded `/api/chat` endpoint.
+
+```bash
+cd frontend
+npm install
+cp .env.example .env      # VITE_API_BASE_URL, defaults to http://127.0.0.1:8000
+npm run dev               # http://localhost:5173
+npm run build             # type-check and bundle
+```
+
+The dev server binds port 5173, which is the origin allowed by the `ARTHA_CORS_ORIGINS` default. The client:
+
+- threads `conversation_id` through every turn, so follow-ups such as “What about July?” resolve against the stored semantic context;
+- renders the validated `FinancialQuery` that was executed, hiding an amount operator unless its bound is set, matching the compiler;
+- renders `how_calculated`, the applied filters, and the masked sample records behind each number, with an explicit notice when records are truncated;
+- renders a structured refusal as a refusal, with its reason, suggestions, and supported capabilities. A `no_data` refusal keeps its grounded evidence because the query did execute;
+- shows engine, per-stage latency, and the LLM call count for each turn.
+
+Monetary values arrive as Pydantic decimal strings and are formatted for display only; they are never parsed into floats for arithmetic.
+
 ## Verification
 
 ```bash
 # Full suite
 uv run pytest backend/tests
+
+# Frontend type-check and bundle
+cd frontend && npm run build
 
 # Static types
 uvx ty check backend evaluation --error-on-warning
@@ -312,6 +337,9 @@ evaluation/run_eval.py                 Reproducible evaluation runner
 evaluation/forced_ollama.json          Corrected frozen 33-case forced-LLM corpus
 evaluation/forced_ollama_original_20260905.json  Archived original forced-LLM corpus
 evaluation/benchmark_ollama.py         Forced-Ollama model-selection runner and offline re-scorer
+frontend/src/api/                      Typed /api/chat contract and fetch client
+frontend/src/components/               Composer, conversation, answer, evidence, interpretation
+frontend/src/App.tsx                   Chat state and conversation threading
 ```
 
 `artha.duckdb` and the root `results.json` are local generated artifacts and are ignored by Git.
