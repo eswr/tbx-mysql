@@ -45,8 +45,10 @@ class Settings(BaseSettings):
     
     # LLM
     ARTHA_LLM_PROVIDER: LLMProvider | None = None  # Auto-detect: rules or ollama
+    ARTHA_OLLAMA_ENABLED: bool = False
     ARTHA_OLLAMA_BASE_URL: str = "http://127.0.0.1:11434"
     ARTHA_OLLAMA_MODEL: str = "qwen3.5:0.8b"
+    ARTHA_OLLAMA_TIMEOUT: float = 30.0
     
     # Conversation
     ARTHA_CONVERSATION_STORE: ConversationStoreType = ConversationStoreType.SQLITE

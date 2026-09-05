@@ -209,6 +209,8 @@ class QueryRefusalReason(str, Enum):
     INVALID_STRUCTURE = "invalid_structure"  # Validation failed
     NO_DATA = "no_data"  # Query is valid but returned zero rows
     CAPABILITY = "capability"  # Feature requires optional adapter (e.g., payout reconciliation)
+    UPSTREAM_UNAVAILABLE = "upstream_unavailable"  # Ollama could not be reached
+    UPSTREAM_TIMEOUT = "upstream_timeout"  # Ollama exceeded its request deadline
 
 
 class QueryRefusal(BaseModel):

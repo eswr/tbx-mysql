@@ -227,6 +227,8 @@ def _success_response(
     engine_name: str,
     understanding_ms: float,
     query_ms: float,
+    llm_calls: int = 0,
+    ollama_metadata: dict[str, Any] | None = None,
 ) -> ChatResponse:
     no_data_refusal = None
     if result.no_data:
@@ -265,7 +267,12 @@ def _success_response(
         refusal=no_data_refusal,
         meta={
             "engine": engine_name,
-            "llm_calls": 0,
+            "llm_calls": llm_calls,
+            "ollama_model": ollama_metadata.get("model") if ollama_metadata else None,
+            "ollama_latency_ms": round(ollama_metadata["latency_ms"], 3) if ollama_metadata else None,
+            "ollama_prompt_tokens": ollama_metadata.get("prompt_tokens") if ollama_metadata else None,
+            "ollama_completion_tokens": ollama_metadata.get("completion_tokens") if ollama_metadata else None,
+            "ollama_total_tokens": ollama_metadata.get("total_tokens") if ollama_metadata else None,
             "understanding_ms": round(understanding_ms, 3),
             "query_ms": round(query_ms, 3),
         },
@@ -279,11 +286,43 @@ async def chat(
     conversation_store: ConversationStore = Depends(get_conversation_store),
 ):
     """Interpret, execute, and return a database-grounded financial answer."""
+    from app.understanding.dates import today_ist
+
     conv_id = req.conversation_id or str(uuid.uuid4())
     started = time.perf_counter()
-    parsed = understand_question(req.question, context=conversation_store.get(conv_id))
+    llm_calls = 0
+    ollama_metadata: dict[str, Any] | None = None
+    context = conversation_store.get(conv_id)
+
+    # Step 1: Try rules-based understanding
+    parsed = understand_question(req.question, context=context)
+
+    # Step 2: Only an explicit rules miss may cross the Ollama boundary.
+    if parsed is None and settings.ARTHA_OLLAMA_ENABLED:
+        try:
+            from app.understanding.ollama import understand_with_ollama
+
+            discovered = await executor.engine.discover_capabilities()
+            ollama_result = await understand_with_ollama(
+                question=req.question,
+                reference_date=today_ist(),
+                context=context,
+                discovered_capabilities=discovered,
+                base_url=settings.ARTHA_OLLAMA_BASE_URL,
+                model=settings.ARTHA_OLLAMA_MODEL,
+                timeout=settings.ARTHA_OLLAMA_TIMEOUT,
+            )
+            parsed = ollama_result.output
+            ollama_metadata = asdict(ollama_result.metadata)
+            llm_calls = 1
+        except Exception as e:
+            logger.error(f"Ollama fallback failed: {e}")
+            parsed = None
+
     understanding_ms = (time.perf_counter() - started) * 1000
     engine_name = _engine_name(executor)
+
+    # Step 3: If still no result, return structured refusal
     if not isinstance(parsed, FinancialQuery):
         structured = parsed or refusal(QueryRefusalReason.AMBIGUOUS, "I could not interpret that question.")
         return ChatResponse(
@@ -293,17 +332,27 @@ async def chat(
             refusal=structured,
             meta={
                 "engine": engine_name,
-                "llm_calls": 0,
+                "llm_calls": llm_calls,
+                "ollama_model": ollama_metadata.get("model") if ollama_metadata else None,
+                "ollama_latency_ms": round(ollama_metadata["latency_ms"], 3) if ollama_metadata else None,
+                "ollama_prompt_tokens": ollama_metadata.get("prompt_tokens") if ollama_metadata else None,
+                "ollama_completion_tokens": ollama_metadata.get("completion_tokens") if ollama_metadata else None,
+                "ollama_total_tokens": ollama_metadata.get("total_tokens") if ollama_metadata else None,
                 "understanding_ms": round(understanding_ms, 3),
                 "query_ms": 0.0,
             },
         )
 
+    # Step 4: Execute query (existing deterministic path)
     query_started = time.perf_counter()
     result = await executor.execute(parsed)
     query_ms = (time.perf_counter() - query_started) * 1000
     conversation_store.put(conv_id, ConversationContext.from_query(parsed))
-    return _success_response(conv_id, parsed, result, engine_name, understanding_ms, query_ms)
+    return _success_response(
+        conv_id, parsed, result, engine_name, understanding_ms, query_ms,
+        llm_calls=llm_calls,
+        ollama_metadata=ollama_metadata,
+    )
 
 
 @app.get("/api/capabilities", response_model=CapabilitiesResponse)

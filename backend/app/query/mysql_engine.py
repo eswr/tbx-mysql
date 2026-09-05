@@ -7,6 +7,7 @@ from urllib.parse import urlparse
 import pymysql
 from pymysql.cursors import DictCursor
 
+from app.config import UTRMode, get_settings
 from app.query.base import Capabilities, BankInfo, QueryEngine
 from app.query.masking import mask_record
 from app.query.sql_render import MySQLDialect, render_sql, validate_sql_select_only
@@ -18,10 +19,14 @@ logger = logging.getLogger(__name__)
 class MySQLQueryEngine(QueryEngine):
     """Query engine backed by MySQL."""
 
-    def __init__(self, db_url: str):
+    def __init__(self, db_url: str, utr_mode: UTRMode | str | None = None):
         self.db_url = db_url
         self.dialect = MySQLDialect()
         self.conn_kwargs = self._parse_url(db_url)
+        configured_utr_mode = utr_mode or get_settings().ARTHA_UTR_MODE
+        self.utr_mode = (
+            configured_utr_mode.value if isinstance(configured_utr_mode, UTRMode) else UTRMode(configured_utr_mode).value
+        )
 
     def _parse_url(self, db_url: str) -> dict:
         """Parse MySQL URL and return connection kwargs."""
@@ -46,7 +51,7 @@ class MySQLQueryEngine(QueryEngine):
 
     async def discover_capabilities(self) -> Capabilities:
         """Probe the MySQL database."""
-        caps = Capabilities()
+        caps = Capabilities(utr_mode=self.utr_mode)
 
         conn = self._get_connection()
         cursor = conn.cursor()
@@ -56,14 +61,14 @@ class MySQLQueryEngine(QueryEngine):
             cursor.execute(
                 f"SELECT table_name FROM information_schema.tables WHERE table_schema='{self.conn_kwargs['database']}'"
             )
-            caps.tables = [row["table_name"] for row in cursor.fetchall()]
+            caps.tables = [next(iter(row.values())) for row in cursor.fetchall()]
 
             # Check columns per table
             for table in caps.tables:
                 cursor.execute(
                     f"SELECT column_name FROM information_schema.columns WHERE table_schema='{self.conn_kwargs['database']}' AND table_name='{table}'"
                 )
-                caps.columns[table] = [row["column_name"] for row in cursor.fetchall()]
+                caps.columns[table] = [next(iter(row.values())) for row in cursor.fetchall()]
 
             # Probe debit sign convention
             try:
@@ -118,18 +123,6 @@ class MySQLQueryEngine(QueryEngine):
                     caps.date_range_end = result["end"]
             except Exception as e:
                 logger.warning(f"Failed to get date range: {e}")
-
-            # Check if UTR index exists (for plaintext mode)
-            try:
-                cursor.execute(
-                    f"SELECT 1 FROM information_schema.statistics WHERE table_schema='{self.conn_kwargs['database']}' AND table_name='transaction' AND column_name='utr_number'"
-                )
-                if cursor.fetchone():
-                    caps.utr_mode = "plaintext"
-                else:
-                    caps.utr_mode = "opaque"
-            except:
-                caps.utr_mode = "plaintext"
 
         except Exception as e:
             logger.error(f"Capability discovery failed: {e}")
