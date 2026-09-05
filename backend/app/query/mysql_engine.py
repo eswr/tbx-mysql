@@ -1,5 +1,6 @@
 """MySQL query engine for production and parity testing."""
 
+import asyncio
 import logging
 from datetime import datetime
 from urllib.parse import urlparse
@@ -22,8 +23,10 @@ class MySQLQueryEngine(QueryEngine):
     def __init__(self, db_url: str, utr_mode: UTRMode | str | None = None):
         self.db_url = db_url
         self.dialect = MySQLDialect()
+        settings = get_settings()
         self.conn_kwargs = self._parse_url(db_url)
-        configured_utr_mode = utr_mode or get_settings().ARTHA_UTR_MODE
+        self.max_execution_time_ms = settings.ARTHA_MYSQL_MAX_EXECUTION_TIME_MS
+        configured_utr_mode = utr_mode or settings.ARTHA_UTR_MODE
         self.utr_mode = (
             configured_utr_mode.value
             if isinstance(configured_utr_mode, UTRMode)
@@ -45,6 +48,9 @@ class MySQLQueryEngine(QueryEngine):
             "charset": "utf8mb4",
             "cursorclass": DictCursor,
             "autocommit": True,
+            "connect_timeout": get_settings().ARTHA_MYSQL_CONNECT_TIMEOUT,
+            "read_timeout": get_settings().ARTHA_MYSQL_READ_TIMEOUT,
+            "write_timeout": get_settings().ARTHA_MYSQL_WRITE_TIMEOUT,
         }
 
     def _get_connection(self):
@@ -53,12 +59,17 @@ class MySQLQueryEngine(QueryEngine):
 
     async def discover_capabilities(self) -> Capabilities:
         """Probe the MySQL database."""
+        return await asyncio.to_thread(self._discover_capabilities_sync)
+
+    def _discover_capabilities_sync(self) -> Capabilities:
+        """Probe MySQL without blocking the application's async event loop."""
         caps = Capabilities(utr_mode=self.utr_mode)
 
         conn = self._get_connection()
         cursor = conn.cursor()
 
         try:
+            cursor.execute(f"SET SESSION MAX_EXECUTION_TIME={self.max_execution_time_ms}")
             # Check tables
             cursor.execute(
                 f"SELECT table_name FROM information_schema.tables WHERE table_schema='{self.conn_kwargs['database']}'"
@@ -74,12 +85,10 @@ class MySQLQueryEngine(QueryEngine):
 
             # Probe debit sign convention
             try:
-                cursor.execute(
-                    "SELECT MIN(transaction_amount) as min_amount FROM `transaction` WHERE transaction_type='debit'"
-                )
+                cursor.execute("SELECT transaction_amount FROM `transaction` WHERE transaction_type='debit' LIMIT 1")
                 result = cursor.fetchone()
-                if result and result["min_amount"] is not None:
-                    if result["min_amount"] < 0:
+                if result and result["transaction_amount"] is not None:
+                    if result["transaction_amount"] < 0:
                         caps.debit_sign = "negative"
                     else:
                         caps.debit_sign = "positive"
@@ -112,6 +121,8 @@ class MySQLQueryEngine(QueryEngine):
                 caps.account_count = cursor.fetchone()["cnt"]
 
                 cursor.execute("SELECT COUNT(*) as cnt FROM `transaction`")
+                # COUNT(*) returns one result row even when the table is empty;
+                # use the scalar count in that row so an empty table stays 0.
                 caps.transaction_count = cursor.fetchone()["cnt"]
             except Exception as e:
                 logger.warning(f"Failed to get counts: {e}")
@@ -138,6 +149,10 @@ class MySQLQueryEngine(QueryEngine):
 
     async def execute_logical_plan(self, plan: LogicalPlan) -> dict:
         """Execute a LogicalPlan."""
+        return await asyncio.to_thread(self._execute_logical_plan_sync, plan)
+
+    def _execute_logical_plan_sync(self, plan: LogicalPlan) -> dict:
+        """Execute one logical plan without blocking the async event loop."""
         compiled = render_sql(plan, self.dialect)
 
         # Validate
@@ -152,7 +167,7 @@ class MySQLQueryEngine(QueryEngine):
         try:
             # Set session options for safety and consistency
             cursor.execute("SET SESSION TRANSACTION READ ONLY")
-            cursor.execute("SET SESSION MAX_EXECUTION_TIME=10000")
+            cursor.execute(f"SET SESSION MAX_EXECUTION_TIME={self.max_execution_time_ms}")
 
             cursor.execute(compiled.sql, compiled.params)
             rows = cursor.fetchall()
@@ -172,6 +187,10 @@ class MySQLQueryEngine(QueryEngine):
 
     async def execute_snapshot(self, plans: list[LogicalPlan], oracle_sqls: list[str] | None = None) -> dict:
         """Execute result, evidence count, and oracle reads in one read-only consistent snapshot."""
+        return await asyncio.to_thread(self._execute_snapshot_sync, plans, oracle_sqls)
+
+    def _execute_snapshot_sync(self, plans: list[LogicalPlan], oracle_sqls: list[str] | None = None) -> dict:
+        """Execute a consistent snapshot without blocking the async event loop."""
         compiled_plans = [render_sql(plan, self.dialect) for plan in plans]
         for compiled in compiled_plans:
             validate_sql_select_only(compiled.sql, "mysql")
@@ -183,7 +202,7 @@ class MySQLQueryEngine(QueryEngine):
         plan_rows = []
         oracle_rows = []
         try:
-            cursor.execute("SET SESSION MAX_EXECUTION_TIME=10000")
+            cursor.execute(f"SET SESSION MAX_EXECUTION_TIME={self.max_execution_time_ms}")
             cursor.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY")
             cursor.execute("START TRANSACTION WITH CONSISTENT SNAPSHOT")
             for compiled in compiled_plans:
@@ -221,6 +240,10 @@ class MySQLQueryEngine(QueryEngine):
 
     async def ping(self) -> bool:
         """Test connectivity."""
+        return await asyncio.to_thread(self._ping_sync)
+
+    def _ping_sync(self) -> bool:
+        """Ping MySQL without blocking the async event loop."""
         try:
             conn = self._get_connection()
             cursor = conn.cursor()

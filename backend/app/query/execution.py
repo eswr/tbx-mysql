@@ -26,13 +26,20 @@ class FinancialQueryExecutor:
 
     async def execute(self, query: FinancialQuery, oracle_sql: list[str] | None = None) -> GroundedResult:
         plans = compile_financial_query(query)
-        plan_list = [plans.result_plan, plans.count_plan]
+        # For a scalar COUNT, the result is already the matched row count. Do
+        # not issue the same potentially expensive database query twice.
+        reuse_scalar_count = (
+            query.aggregation == Aggregation.COUNT and not query.group_by and plans.comparison_result_plan is None
+        )
+        plan_list = [plans.result_plan] if reuse_scalar_count else [plans.result_plan, plans.count_plan]
         if plans.comparison_result_plan is not None:
             plan_list.extend([plans.comparison_result_plan, plans.comparison_count_plan])
         self.execution_count += 1
         bundle = await self.engine.execute_snapshot(plan_list, oracle_sql or [])
         result_rows = bundle["plan_rows"][0]
-        matched_count = int(bundle["plan_rows"][1][0]["matched_count"])
+        matched_count = (
+            int(result_rows[0]["value"]) if reuse_scalar_count else int(bundle["plan_rows"][1][0]["matched_count"])
+        )
         value = result_rows[0].get("value") if len(result_rows) == 1 and "value" in result_rows[0] else None
         is_detail = query.aggregation == Aggregation.NONE
         no_data = matched_count == 0 and (is_detail or query.aggregation != Aggregation.COUNT)

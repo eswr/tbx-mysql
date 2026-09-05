@@ -41,6 +41,7 @@ class Intent(str, Enum):
     COMPARISON = "comparison"  # "Aug vs Jul spend"
     ACCOUNT_BALANCE = "account_balance"  # "What's my balance?"
     ACCOUNT_LIST = "account_list"  # "Show my accounts"
+    ACCOUNT_COUNT = "account_count"  # "What is the total number of accounts?"
     BANK_BALANCE = "bank_balance"  # "Which bank holds the most?"
     BANK_ACCOUNT_COUNT = "bank_account_count"  # "How many accounts per bank?"
     REFERENCE_LOOKUP = "reference_lookup"  # "Find txn with ref #1234"
@@ -166,6 +167,13 @@ class FinancialQuery(BaseModel):
         if self.metric == Metric.BALANCE:
             if self.intent not in (Intent.ACCOUNT_BALANCE, Intent.BANK_BALANCE, Intent.ACCOUNT_LIST):
                 raise ValueError(f"Balance metric only valid for balance intents, not {self.intent}")
+
+        # Total account counts use the existing count metric.
+        if self.intent == Intent.ACCOUNT_COUNT:
+            if self.metric != Metric.TRANSACTION_COUNT:
+                raise ValueError(f"{self.intent.value} requires metric=transaction_count")
+            if self.aggregation != Aggregation.COUNT:
+                raise ValueError(f"{self.intent.value} requires aggregation=count")
 
         # Bank account count requires transaction count
         if self.intent == Intent.BANK_ACCOUNT_COUNT:

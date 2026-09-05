@@ -16,6 +16,9 @@ DB_URL      ?= mysql://artha:artha@127.0.0.1:3306/artha
 
 export PYTHONPATH := backend
 
+# Benchmark, parity, and evaluation recipes explicitly inject DB_URL. A judge
+# URL is never a fallback for these targets.
+
 .PHONY: help
 help: ## Show this help
 	@echo "Artha — AI Finance Assistant"
@@ -62,13 +65,20 @@ db-down: ## Stop MySQL (keeps the data volume)
 	docker compose down
 
 .PHONY: db-reset
-db-reset: ## Destroy the MySQL volume and start clean
+db-reset: guard-destructive ## Destroy the local MySQL volume and start clean
 	docker compose down -v
 	$(MAKE) db-up
 
 .PHONY: seed
-seed: ## Load the synthetic fixture into MySQL
+seed: guard-destructive ## Load the synthetic fixture into local MySQL
 	$(PY) backend/scripts/load_fixture.py --db-url "$(DB_URL)" --clear
+
+.PHONY: guard-destructive guard-benchmark-db
+guard-destructive:
+	@$(PY) backend/scripts/db_safety.py guard-destructive --db-url "$(DB_URL)"
+
+guard-benchmark-db:
+	@env -u ARTHA_DATABASE_URL $(PY) backend/scripts/db_safety.py guard-destructive --db-url "$(DB_URL)"
 
 .PHONY: db-shell
 db-shell: ## Open a MySQL shell against the app database
@@ -89,6 +99,27 @@ dev: ## Run backend and frontend together (Ctrl-C stops both)
 backend: ## Run the FastAPI backend with reload
 	$(UVICORN) app.main:app --app-dir backend --reload --port $(API_PORT)
 
+.PHONY: judge
+judge: ## Run the backend against an externally supplied read-only judge DB
+	@$(PY) backend/scripts/db_safety.py require-judge-url
+	@echo "Starting judge backend (database URL hidden; Ollama disabled)"
+	@ARTHA_OLLAMA_ENABLED=false $(UVICORN) app.main:app --app-dir backend --port $(API_PORT)
+
+.PHONY: judge-check
+judge-check: ## Verify judge health, capabilities, and a read-only smoke query
+	@$(PY) backend/scripts/db_safety.py require-judge-url
+	@ARTHA_API_BASE_URL="http://127.0.0.1:$(API_PORT)" $(PY) backend/scripts/judge_check.py
+
+.PHONY: judge-dev
+judge-dev: ## Run judge-backed backend and frontend together (Ctrl-C stops both)
+	@$(PY) backend/scripts/db_safety.py require-judge-url
+	@echo "API  → http://127.0.0.1:$(API_PORT) (judge database URL hidden; Ollama disabled)"
+	@echo "Web  → http://localhost:$(WEB_PORT)"
+	@trap 'kill 0' EXIT INT TERM; \
+	$(MAKE) --no-print-directory judge & \
+	env -u ARTHA_DATABASE_URL $(MAKE) --no-print-directory frontend & \
+	wait
+
 .PHONY: frontend
 frontend: ## Run the Vite dev server
 	cd $(FRONTEND) && npm run dev
@@ -99,15 +130,15 @@ frontend: ## Run the Vite dev server
 check: lint typecheck test build ## Everything CI would run
 
 .PHONY: all
-all: lint pytype test-all frontend-test typecheck build eval eval-holdout diff-check ## Complete local release verification
+all: guard-benchmark-db lint pytype test-all frontend-test typecheck build eval eval-holdout diff-check ## Complete local release verification
 
 .PHONY: test
 test: ## Run the Python test suite (skips tests needing live MySQL)
 	$(PYTEST) backend/tests -q -m "not requires_mysql"
 
 .PHONY: test-all
-test-all: ## Run every test, including those requiring live MySQL
-	$(PYTEST) backend/tests -q
+test-all: guard-benchmark-db ## Run every test, including those requiring local MySQL
+	@ARTHA_DATABASE_URL="$(DB_URL)" ARTHA_BENCHMARK_DB_URL="$(DB_URL)" $(PYTEST) backend/tests -q
 
 .PHONY: test-cov
 test-cov: ## Run tests with a coverage report
@@ -140,12 +171,12 @@ build: ## Production build of the frontend
 	cd $(FRONTEND) && npm run build
 
 .PHONY: eval
-eval: ## Run the evaluation suite against MySQL
-	$(PY) evaluation/run_eval.py --engine mysql --mysql-url "$(DB_URL)"
+eval: guard-benchmark-db ## Run the evaluation suite against local MySQL
+	@ARTHA_DATABASE_URL="$(DB_URL)" $(PY) evaluation/run_eval.py --engine mysql --mysql-url "$(DB_URL)"
 
 .PHONY: eval-holdout
-eval-holdout: ## Run the final MySQL evaluation including the frozen holdout
-	$(PY) evaluation/run_eval.py --engine mysql --mysql-url "$(DB_URL)" --include-holdout
+eval-holdout: guard-benchmark-db ## Run the final local MySQL evaluation including the frozen holdout
+	@ARTHA_DATABASE_URL="$(DB_URL)" $(PY) evaluation/run_eval.py --engine mysql --mysql-url "$(DB_URL)" --include-holdout
 
 .PHONY: diff-check
 diff-check: ## Check patches for whitespace errors

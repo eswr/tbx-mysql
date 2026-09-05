@@ -23,6 +23,11 @@ DB_NAME="artha_sample"
 ARTHA_USER="artha"
 ARTHA_PASSWORD="artha"
 
+# This script drops a database. Refuse to run if the active app URL is remote,
+# even though the Docker command below is explicitly loopback-only.
+python3 "$SCRIPT_DIR/db_safety.py" guard-destructive \
+    --db-url "mysql://${ARTHA_USER}:${ARTHA_PASSWORD}@${MYSQL_HOST}:${MYSQL_PORT}/${DB_NAME}"
+
 echo "=========================================="
 echo "Setting up artha_sample database"
 echo "=========================================="

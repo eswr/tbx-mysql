@@ -39,6 +39,10 @@ class Settings(BaseSettings):
     # Database
     ARTHA_DATABASE_URL: str = "mysql://artha:artha@127.0.0.1:3306/artha"
     ARTHA_MYSQL_SESSION_TZ: str = "+05:30"
+    ARTHA_MYSQL_CONNECT_TIMEOUT: float = 5.0
+    ARTHA_MYSQL_READ_TIMEOUT: float = 15.0
+    ARTHA_MYSQL_WRITE_TIMEOUT: float = 10.0
+    ARTHA_MYSQL_MAX_EXECUTION_TIME_MS: int = 10000
 
     # Semantics
     ARTHA_DEBIT_SIGN: DebitSignConvention = DebitSignConvention.POSITIVE

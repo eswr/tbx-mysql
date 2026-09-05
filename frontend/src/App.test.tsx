@@ -118,3 +118,45 @@ it("revalidates health after a network-class chat failure", async () => {
   await waitFor(() => expect(healthCalls).toBe(2));
   expect(chatCalls).toBe(1);
 });
+
+it("lists completed conversations and restores a selected conversation", async () => {
+  let chatCalls = 0;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.endsWith("/api/health")) return jsonResponse(healthResponse());
+      if (url.endsWith("/api/capabilities")) return jsonResponse(capabilitiesResponse());
+      if (url.endsWith("/api/chat")) {
+        chatCalls += 1;
+        return jsonResponse(
+          chatResponse({
+            conversation_id: `conversation-${chatCalls}`,
+            answer: chatCalls === 1 ? "First answer" : "Second answer",
+          }),
+        );
+      }
+      throw new Error(`Unexpected URL: ${url}`);
+    }),
+  );
+  const user = userEvent.setup();
+  render(<App />);
+  await screen.findByText(/healthy · mysql/i);
+
+  await user.type(screen.getByLabelText(/Ask a question/), "First question");
+  await user.click(screen.getByRole("button", { name: "Send" }));
+  expect(await screen.findByText("First answer")).toBeVisible();
+
+  await user.click(screen.getByRole("button", { name: "New conversation" }));
+  await user.type(screen.getByLabelText(/Ask a question/), "Second question");
+  await user.click(screen.getByRole("button", { name: "Send" }));
+  expect(await screen.findByText("Second answer")).toBeVisible();
+
+  expect(screen.getByTitle("First question")).toHaveTextContent("1 turn");
+  expect(screen.getByTitle("Second question")).toHaveAttribute("aria-current", "page");
+
+  await user.click(screen.getByTitle("First question"));
+  expect(screen.getByText("First answer")).toBeVisible();
+  expect(screen.queryByText("Second answer")).not.toBeInTheDocument();
+  expect(sessionStorage.getItem("artha.conversation_id")).toBe("conversation-1");
+});

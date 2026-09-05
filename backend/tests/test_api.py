@@ -195,6 +195,46 @@ class GroupedEngine:
         }
 
 
+class AccountCountEngine:
+    def __init__(self, value=5000):
+        self.calls = []
+        self.value = value
+
+    async def execute_snapshot(self, plans, oracle_sqls):
+        self.calls.append(plans)
+        return {
+            "plan_rows": [[{"value": self.value}]],
+            "oracle_rows": [],
+            "sql": ["SELECT COUNT(*) AS value FROM account a"],
+        }
+
+
+@pytest.mark.asyncio
+async def test_chat_total_account_count_returns_grounded_scalar_answer():
+    engine = AccountCountEngine()
+    app.dependency_overrides[get_executor] = lambda: FinancialQueryExecutor(engine)
+    app.dependency_overrides[get_conversation_store] = lambda: InMemoryConversationStore()
+    try:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post("/api/chat", json={"question": "what is the total number of accounts?"})
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["answer"] == "The total number of accounts is 5,000."
+    assert body["interpretation"]["intent"] == "account_count"
+    assert body["interpretation"]["group_by"] == []
+    assert body["calculation"] == "COUNT(*)"
+    assert body["matched_count"] == 5000
+    assert body["evidence"]["source"] == "account"
+    assert body["evidence"]["grounded"] is True
+    assert body["refusal"] is None
+    assert len(engine.calls) == 1
+    assert len(engine.calls[0]) == 1
+
+
 @pytest.mark.asyncio
 async def test_chat_grouped_question_returns_breakdown_evidence():
     engine = GroupedEngine()

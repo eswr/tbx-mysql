@@ -207,6 +207,28 @@ Runs capability discovery against the configured database and returns tables, co
 
 Returns `healthy` when MySQL responds to a ping and `degraded` otherwise.
 
+## Judge-day database workflow
+
+Treat the judge database as externally managed and read-only. Supply its URL only through the shell environment; the judge targets never echo it, seed it, migrate it, clear it, or pass it to benchmark/evaluation commands. Use a database account with read-only privileges as an additional safeguard.
+
+```bash
+read -s ARTHA_DATABASE_URL
+export ARTHA_DATABASE_URL
+echo
+
+make judge
+# in another terminal, with ARTHA_DATABASE_URL exported there too:
+make judge-check
+# then:
+make frontend
+```
+
+After `make judge-check` passes, `make judge-dev` can run the backend and frontend together. The judge URL is supplied only to the backend process; the frontend talks to the backend API. `ARTHA_OLLAMA_ENABLED=false` is forced by both judge backend targets, regardless of `.env`.
+
+Before every live demo, require both `/api/health` and `/api/capabilities` to succeed. `make judge-check` prints the engine, tables, row counts, banks, date range, debit-sign detection, UTR mode, warnings, and the result of one grounded read-only “How many accounts per bank?” smoke query. A degraded or unreachable backend, an API error, an unknown debit-sign/UTR mode, an explicitly configured debit-sign mismatch, or an ungrounded smoke response causes a non-zero exit instead of guessing. An `opaque` UTR mode is a supported safe degradation: UTR lookup remains unavailable.
+
+Never run `make seed`, `make db-reset`, `make all`, evaluation, parity tests, or fixture/setup loaders against the judge database. Destructive targets and loaders reject non-loopback database hosts. `make all`, MySQL parity, and evaluation are pinned to the local benchmark `DB_URL` and refuse a non-local `DB_URL`; they never fall back to `ARTHA_DATABASE_URL`.
+
 ## Frontend
 
 A single-purpose chat client for the grounded `/api/chat` endpoint.

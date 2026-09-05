@@ -31,11 +31,17 @@ logger = logging.getLogger(__name__)
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from fixtures.generate_fixture import generate_fixture, write_csvs  # noqa: E402
+from scripts.db_safety import redact_url, require_local_for_destructive_action  # noqa: E402
 
 
 def load_mysql(db_url: str, csv_dir: str, clear: bool = True):
     """Load CSV files into MySQL."""
-    logger.info(f"Connecting to MySQL: {db_url}")
+    try:
+        require_local_for_destructive_action(db_url, os.environ.get("ARTHA_DATABASE_URL"))
+    except ValueError as exc:
+        logger.error(str(exc))
+        return False
+    logger.info(f"Connecting to MySQL: {redact_url(db_url)}")
 
     # Parse MySQL URL
     from urllib.parse import urlparse

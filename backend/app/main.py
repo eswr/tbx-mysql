@@ -277,6 +277,8 @@ def _answer(query: FinancialQuery, result: GroundedResult) -> str:
             return grouped
     if query.aggregation == Aggregation.NONE:
         return f"I found {result.matched_count} matching transaction(s) for {period}."
+    if query.intent == Intent.ACCOUNT_COUNT:
+        return f"The total number of accounts is {int(result.value):,}."
     if query.aggregation == Aggregation.COUNT:
         return f"I found {_format_value(result.value)} matching transaction(s) for {period}."
     if query.intent.value == "account_balance":
@@ -312,7 +314,7 @@ def _success_response(
             filters_applied=_filters(query),
         ),
         source="account"
-        if query.intent in {Intent.ACCOUNT_BALANCE, Intent.BANK_BALANCE, Intent.BANK_ACCOUNT_COUNT}
+        if query.intent in {Intent.ACCOUNT_BALANCE, Intent.ACCOUNT_COUNT, Intent.BANK_BALANCE, Intent.BANK_ACCOUNT_COUNT}
         else "transaction",
         grounded=True,
         breakdown=_breakdown(query, result.rows),

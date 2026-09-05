@@ -304,6 +304,10 @@ def compile_financial_query(query: FinancialQuery) -> PlanSet:
         result = LogicalPlan(["SUM(a.available_balance) AS value"], "account", primary_alias="a", predicates=predicates)
         count = LogicalPlan(["COUNT(*) AS matched_count"], "account", primary_alias="a", predicates=predicates)
         plans = PlanSet(result, count)
+    elif query.intent == Intent.ACCOUNT_COUNT:
+        result = LogicalPlan(["COUNT(*) AS value"], "account", primary_alias="a")
+        count = LogicalPlan(["COUNT(*) AS matched_count"], "account", primary_alias="a")
+        plans = PlanSet(result, count)
     elif query.intent == Intent.BANK_BALANCE:
         plans = _bank_grouped_account_plans(query, "SUM(a.available_balance) AS value")
     elif query.intent == Intent.BANK_ACCOUNT_COUNT:

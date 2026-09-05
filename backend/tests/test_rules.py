@@ -4,7 +4,7 @@ import pytest
 from datetime import date
 from app.conversation import ConversationContext
 from app.understanding.rules import understand_question
-from app.schemas.financial_query import FinancialQuery, QueryRefusal, Intent, Metric
+from app.schemas.financial_query import Aggregation, FinancialQuery, QueryRefusal, Intent, Metric
 
 
 def parse_q(question, context=None):
@@ -84,6 +84,35 @@ def test_transaction_listing_is_not_mistaken_for_an_account_listing():
     assert result.intent == Intent.TRANSACTION_LIST
     assert result.filters.bank_code == "SBIN"
     assert result.filters.account_id is None
+
+
+@pytest.mark.parametrize(
+    "question",
+    [
+        "what is the total number of accounts?",
+        "How many accounts are there?",
+        "How many accounts do I have?",
+    ],
+)
+def test_total_account_count(question):
+    result = parse_q(question)
+    assert isinstance(result, FinancialQuery)
+    assert result.intent == Intent.ACCOUNT_COUNT
+    assert result.metric == Metric.TRANSACTION_COUNT
+    assert result.aggregation == Aggregation.COUNT
+    assert result.group_by == []
+
+
+def test_account_count_precedence_preserves_grouped_and_list_intents():
+    grouped = parse_q("How many accounts do I have with each bank?")
+    listed = parse_q("Show all my accounts")
+
+    assert isinstance(grouped, FinancialQuery)
+    assert grouped.intent == Intent.BANK_ACCOUNT_COUNT
+    assert grouped.group_by == ["bank"]
+    assert isinstance(listed, FinancialQuery)
+    assert listed.intent == Intent.ACCOUNT_LIST
+    assert listed.aggregation == Aggregation.NONE
 
 
 @pytest.mark.parametrize(

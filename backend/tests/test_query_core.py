@@ -230,6 +230,23 @@ def test_bank_grouped_intents_compile_to_allowlisted_plans(question, expected_in
     assert "COUNT(DISTINCT a.bank_code) AS matched_count" in count_sql
 
 
+def test_total_account_count_compiles_to_scalar_account_plan():
+    from app.query.compiler import compile_financial_query
+    from app.query.sql_render import MySQLDialect, render_sql
+    from app.schemas.financial_query import FinancialQuery
+    from app.understanding.rules import understand_question
+
+    parsed = understand_question("what is the total number of accounts?")
+    assert isinstance(parsed, FinancialQuery)
+
+    plans = compile_financial_query(parsed)
+    assert plans.result_plan.primary_table == "account"
+    assert plans.result_plan.select_columns == ["COUNT(*) AS value"]
+    assert plans.result_plan.predicates == []
+    assert not plans.result_plan.group_by
+    assert render_sql(plans.result_plan, MySQLDialect()).sql == "SELECT COUNT(*) AS value FROM account a"
+
+
 def test_unsupported_group_dimension_fails_closed():
     """Month grouping has no compiled plan; the compiler must refuse rather than guess."""
     from datetime import date, timedelta

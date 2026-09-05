@@ -1,5 +1,6 @@
 """Shared pytest fixtures."""
 
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -57,4 +58,4 @@ def mysql_available():
 @pytest.fixture(scope="session")
 def mysql_url():
     """MySQL connection URL (if available)."""
-    return "mysql://artha:artha@127.0.0.1:3306/artha"
+    return os.environ.get("ARTHA_BENCHMARK_DB_URL", "mysql://artha:artha@127.0.0.1:3306/artha")

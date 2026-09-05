@@ -237,9 +237,36 @@ def understand_question(
                     date_range=DateRange(start=ref_date, end=ref_date + timedelta(days=1), label="current"),
                 )
 
+    # Keep grouped account counts more specific than total account counts.
+    if re.search(r"\baccounts?\b.{0,40}\b(each bank|per bank)\b", q_lower):
+        return FinancialQuery(
+            intent=Intent.BANK_ACCOUNT_COUNT,
+            metric=Metric.TRANSACTION_COUNT,
+            aggregation=Aggregation.COUNT,
+            filters=QueryFilters(),
+            date_range=DateRange(start=ref_date, end=ref_date + timedelta(days=1)),
+            group_by=[GroupByDimension.BANK],
+        )
+
+    # Total account count. This is independent of transaction dates.
+    if re.search(
+        r"\bhow many accounts\b|"
+        r"\b(?:total (?:number|count)|number|count) of accounts\b|"
+        r"\baccount count\b|"
+        r"\baccounts\b.{0,24}\b(?:are there|do i have|in total|altogether)\b",
+        q_lower,
+    ):
+        return FinancialQuery(
+            intent=Intent.ACCOUNT_COUNT,
+            metric=Metric.TRANSACTION_COUNT,
+            aggregation=Aggregation.COUNT,
+            filters=QueryFilters(),
+            date_range=DateRange(start=ref_date, end=ref_date + timedelta(days=1)),
+        )
+
     # Account list; "transactions from my SBI accounts" is a transaction question, not an account listing.
     if not re.search(r"\btransactions?\b", q_lower) and re.search(
-        r"\b(my accounts|all accounts|accounts do i have|show.*accounts)\b", q_lower
+        r"\b(my accounts|all accounts|show.*accounts|list.*accounts)\b", q_lower
     ):
         return FinancialQuery(
             intent=Intent.ACCOUNT_LIST,
@@ -248,17 +275,6 @@ def understand_question(
             filters=QueryFilters(),
             date_range=DateRange(start=ref_date, end=ref_date + timedelta(days=1)),
             limit=25,
-        )
-
-    # Bank account count
-    if re.search(r"\b(how many accounts|accounts?.*(each bank|per bank))\b", q_lower):
-        return FinancialQuery(
-            intent=Intent.BANK_ACCOUNT_COUNT,
-            metric=Metric.TRANSACTION_COUNT,
-            aggregation=Aggregation.COUNT,
-            filters=QueryFilters(),
-            date_range=DateRange(start=ref_date, end=ref_date + timedelta(days=1)),
-            group_by=[GroupByDimension.BANK],
         )
 
     # Keep unsupported grouping explicit instead of allowing it to fall through to
