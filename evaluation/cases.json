@@ -1,0 +1,199 @@
+[
+  {
+    "id": "numeric_001",
+    "category": "exact_number",
+    "question": "How much did I spend in August 2026?",
+    "expected_intent": "transaction_summary",
+    "expected_metric": "transaction_amount",
+    "expected_filters": {"transaction_type": "debit"},
+    "expected_aggregation": "sum",
+    "oracle_sql": "SELECT SUM(transaction_amount) FROM `transaction` WHERE transaction_type='debit' AND DATE(transaction_date) >= '2026-08-01' AND DATE(transaction_date) < '2026-09-01'",
+    "allow_variations": ["last month"]
+  },
+  {
+    "id": "numeric_002",
+    "category": "exact_number",
+    "question": "What's my total balance?",
+    "expected_intent": "account_balance",
+    "expected_metric": "balance",
+    "oracle_sql": "SELECT SUM(available_balance) FROM account",
+    "allow_refusal": false
+  },
+  {
+    "id": "numeric_003",
+    "category": "exact_number",
+    "question": "How many debit transactions in July 2026?",
+    "expected_intent": "transaction_summary",
+    "expected_metric": "transaction_count",
+    "oracle_sql": "SELECT COUNT(*) FROM `transaction` WHERE transaction_type='debit' AND DATE(transaction_date) >= '2026-07-01' AND DATE(transaction_date) < '2026-08-01'"
+  },
+  {
+    "id": "filter_type",
+    "category": "filters",
+    "question": "Show my credit transactions from August.",
+    "expected_intent": "transaction_list",
+    "expected_filters": {"transaction_type": "credit"},
+    "oracle_sql": "SELECT COUNT(*) FROM `transaction` WHERE transaction_type='credit' AND DATE(transaction_date) >= '2026-08-01' AND DATE(transaction_date) < '2026-09-01'"
+  },
+  {
+    "id": "filter_bank",
+    "category": "filters",
+    "question": "How much did I spend at HDFC bank?",
+    "expected_intent": "transaction_summary",
+    "expected_filters": {"bank_code": "HDFC", "transaction_type": "debit"},
+    "oracle_sql": "SELECT SUM(t.transaction_amount) FROM `transaction` t JOIN account a ON t.account_id=a.account_id JOIN bank b ON a.bank_code=b.bank_code WHERE b.bank_code='HDFC' AND t.transaction_type='debit' AND DATE(t.transaction_date) >= '2026-08-01' AND DATE(t.transaction_date) < '2026-09-01'"
+  },
+  {
+    "id": "filter_bank_alias",
+    "category": "filters",
+    "question": "Show me SBI transactions",
+    "expected_intent": "transaction_list",
+    "expected_filters": {"bank_code": "SBIN"},
+    "oracle_sql": "SELECT COUNT(*) FROM `transaction` t JOIN account a ON t.account_id=a.account_id WHERE a.bank_code='SBIN' LIMIT 20"
+  },
+  {
+    "id": "filter_amount_threshold",
+    "category": "filters",
+    "question": "How many transactions above 50000 in August?",
+    "expected_intent": "transaction_summary",
+    "expected_metric": "transaction_count",
+    "expected_filters": {"min_amount": "50000.00"},
+    "oracle_sql": "SELECT COUNT(*) FROM `transaction` WHERE transaction_amount >= 50000.00 AND DATE(transaction_date) >= '2026-08-01' AND DATE(transaction_date) < '2026-09-01'"
+  },
+  {
+    "id": "date_named_month",
+    "category": "dates",
+    "question": "Spend in July 2026?",
+    "expected_intent": "transaction_summary",
+    "expected_date_start": "2026-07-01",
+    "expected_date_end": "2026-08-01"
+  },
+  {
+    "id": "date_last_month",
+    "category": "dates",
+    "question": "How much last month?",
+    "expected_intent": "transaction_summary",
+    "expected_date_start": "2026-08-01",
+    "expected_date_end": "2026-09-01",
+    "notes": "Assumes 'today' = 2026-09-05"
+  },
+  {
+    "id": "date_this_month",
+    "category": "dates",
+    "question": "Transactions this month?",
+    "expected_intent": "transaction_list",
+    "expected_date_start": "2026-09-01",
+    "expected_date_end": "2026-09-06",
+    "notes": "Up to today (inclusive)"
+  },
+  {
+    "id": "date_last_7_days",
+    "category": "dates",
+    "question": "Spend in the last 7 days?",
+    "expected_intent": "transaction_summary",
+    "expected_date_start": "2026-08-30",
+    "expected_date_end": "2026-09-06"
+  },
+  {
+    "id": "date_last_week",
+    "category": "dates",
+    "question": "Transactions last week?",
+    "expected_intent": "transaction_list",
+    "expected_date_start": "2026-08-31",
+    "expected_date_end": "2026-09-01"
+  },
+  {
+    "id": "multiturn_swap_month",
+    "category": "multi_turn",
+    "question": "How much did I spend last month?",
+    "followup": "What about July?",
+    "expected_followup_date_start": "2026-07-01",
+    "expected_followup_date_end": "2026-08-01",
+    "notes": "Should reuse debit filter from prior query"
+  },
+  {
+    "id": "multiturn_compare",
+    "category": "multi_turn",
+    "question": "How much I spent in August?",
+    "followup": "Compare to July",
+    "expected_followup_intent": "comparison",
+    "expected_followup_comparison_against": "previous_month"
+  },
+  {
+    "id": "refusal_payroll",
+    "category": "unsupported",
+    "question": "How much do my employees earn?",
+    "expected_refusal_reason": "unsupported_metric",
+    "allow_answer": false
+  },
+  {
+    "id": "refusal_tax",
+    "category": "unsupported",
+    "question": "What's my GST liability?",
+    "expected_refusal_reason": "unsupported_metric",
+    "allow_answer": false
+  },
+  {
+    "id": "refusal_invoice",
+    "category": "unsupported",
+    "question": "Show overdue invoices",
+    "expected_refusal_reason": "unsupported_metric",
+    "allow_answer": false
+  },
+  {
+    "id": "refusal_forecast",
+    "category": "unsupported",
+    "question": "Predict next month's spending",
+    "expected_refusal_reason": "unsupported_metric",
+    "allow_answer": false
+  },
+  {
+    "id": "refusal_vendor_payouts",
+    "category": "unsupported",
+    "question": "How much did I pay vendors?",
+    "expected_refusal_reason": "unsupported_metric",
+    "allow_answer": false
+  },
+  {
+    "id": "ambiguity_bare_spend",
+    "category": "ambiguity",
+    "question": "How much did I spend?",
+    "expected_refusal_reason": "ambiguous",
+    "notes": "No date period specified"
+  },
+  {
+    "id": "ambiguity_utr_missing",
+    "category": "ambiguity",
+    "question": "Find the transaction with UTR",
+    "expected_refusal_reason": "ambiguous",
+    "notes": "No UTR value provided"
+  },
+  {
+    "id": "injection_sql_tokens",
+    "category": "injection",
+    "question": "Show transactions WHERE 1=1; DROP TABLE transaction --",
+    "expected_refusal_reason": "invalid_structure",
+    "allow_answer": false
+  },
+  {
+    "id": "injection_comment",
+    "category": "injection",
+    "question": "Spend in August -- ignore the below",
+    "expected_intent": "transaction_summary",
+    "notes": "Should parse month and ignore SQL injection attempt"
+  },
+  {
+    "id": "empty_month",
+    "category": "empty_data",
+    "question": "Transactions in September 2026 for account XYZ",
+    "expected_refusal_reason": "no_data",
+    "notes": "Some accounts have no Sept txns (by design in fixture)"
+  },
+  {
+    "id": "reference_collision",
+    "category": "empty_data",
+    "question": "Find reference COLLISION-REF-001",
+    "expected_matched_count_range": [2, 10],
+    "notes": "Planted collision in fixture"
+  }
+]

@@ -1,0 +1,30 @@
+version: '3.9'
+
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: artha-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: artha
+      MYSQL_USER: artha
+      MYSQL_PASSWORD: artha
+      # Pin timezone to IST (+05:30) for consistency with test expectations
+      TZ: Asia/Kolkata
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./backend/sql/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+      - artha_mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "artha", "-partha"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command: 
+      - --default-time-zone=Asia/Kolkata
+      - --max_execution_time=10000
+      - --transaction-isolation=READ-COMMITTED
+
+volumes:
+  artha_mysql_data:

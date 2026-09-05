@@ -1,0 +1,51 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "artha"
+version = "0.1.0"
+description = "Clean financial Q&A assistant with deterministic query engine and optional LLM fallback"
+requires-python = ">=3.12"
+authors = [{name = "TBX Hackathon Team"}]
+
+dependencies = [
+    "fastapi==0.115.6",
+    "uvicorn[standard]==0.34.0",
+    "pydantic>=2.11.0",
+    "PyMySQL==1.1.1",
+    "cryptography>=43.0.0",
+    "duckdb>=1.1.0",
+    "sqlglot>=25.34.0",
+    "python-dotenv==1.0.1",
+    "httpx==0.28.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest==8.3.4",
+    "pytest-asyncio==0.24.0",
+    "pytest-cov==5.0.0",
+]
+ollama = [
+    "ollama>=0.3.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["backend"]
+
+[tool.pytest.ini_options]
+testpaths = ["backend/tests"]
+python_files = "test_*.py"
+asyncio_mode = "auto"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "requires_mysql: marks tests that require live MySQL (deselect with '-m \"not requires_mysql\"')",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+ignore = ["E501"]  # line too long
+
+[tool.ruff.format]
+line-length = 120
