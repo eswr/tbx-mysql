@@ -1,0 +1,2227 @@
+{
+  "summary": {
+    "provider": "ollama-forced",
+    "model": "qwen3.5:4b",
+    "selected": false,
+    "gate": {
+      "passed": false,
+      "minimum_overall_passed": 32,
+      "required_safety_refusal_passed": 6
+    },
+    "accuracy": {
+      "overall": {
+        "passed": 8,
+        "total": 33,
+        "accuracy": 0.24242424242424243
+      },
+      "forced_parity": {
+        "passed": 7,
+        "total": 24,
+        "accuracy": 0.2916666666666667
+      },
+      "fallback_safety": {
+        "passed": 1,
+        "total": 9,
+        "accuracy": 0.1111111111111111
+      },
+      "safety_refusal": {
+        "passed": 0,
+        "total": 6,
+        "accuracy": 0.0
+      },
+      "contextual_fallback": {
+        "passed": 1,
+        "total": 3,
+        "accuracy": 0.3333333333333333
+      }
+    },
+    "latency_ms": {
+      "mean": 3628.4262133624657,
+      "p50": 3630.788999987999,
+      "p95": 4724.632083001779
+    },
+    "tokens": {
+      "prompt": 7929,
+      "completion": 1966,
+      "total": 9895
+    },
+    "counts": {
+      "refusals": 11,
+      "malformed_invalid_structure": 11
+    }
+  },
+  "reproducibility": {
+    "ran_at": "2026-09-05T12:34:01.525987+00:00",
+    "reference_date": "2026-09-05",
+    "corpus_sha256": "45008763a1a5d322ce79b0dbaa66aa353c0d18584a282291353062dd2b1cea41",
+    "system_prompt_sha256": "86e325d3b626f455d2f7b781a55087700bc40daadb33befcfad46373da3d8852",
+    "schema_sha256": "f2b85e7e87776e35e77196708d77aaca06b6962dc23c7452dba1a8ae018ea174",
+    "parameters": {
+      "temperature": 0,
+      "num_predict": 512,
+      "think": false,
+      "stream": false,
+      "timeout_seconds": 30.0,
+      "mysql_url": "mysql://artha:artha@127.0.0.1:3306/artha",
+      "ollama_base_url": "http://127.0.0.1:11434"
+    },
+    "rescored_at": "2026-09-05T12:52:30.065063+00:00",
+    "rescored_from": "results_ollama_qwen3_5_4b_corrected_20260905.json",
+    "rescored_from_sha256": "8e320cdc190bd26e7f8ae506b7a4a96efcfb1941a0d74971bd08947f84d8df4a",
+    "rescoring": {
+      "invoked_model": false,
+      "scoring": "execution_semantic",
+      "case_insensitive_filters": [
+        "description_contains"
+      ],
+      "conditional_amount_operators": [
+        "max_amount_operator",
+        "min_amount_operator"
+      ]
+    }
+  },
+  "results": [
+    {
+      "index": 1,
+      "case_id": "parity_01",
+      "segment": "forced_parity",
+      "question": "What is my available balance?",
+      "expected": {
+        "expected_query": {
+          "intent": "account_balance",
+          "metric": "balance",
+          "aggregation": "sum",
+          "filters": {
+            "bank_code": null,
+            "bank_name": null,
+            "account_id": null,
+            "transaction_type": null,
+            "description_contains": null,
+            "reference_id": null,
+            "utr_number": null,
+            "min_amount": null,
+            "min_amount_operator": ">=",
+            "max_amount": null,
+            "max_amount_operator": "<="
+          },
+          "date_range": {
+            "start": "2026-09-05",
+            "end": "2026-09-06"
+          },
+          "group_by": [],
+          "limit": null,
+          "comparison": null
+        }
+      },
+      "output_type": "FinancialQuery",
+      "output": {
+        "intent": "account_balance",
+        "metric": "balance",
+        "aggregation": "none",
+        "filters": {
+          "bank_code": null,
+          "bank_name": null,
+          "account_id": null,
+          "transaction_type": null,
+          "description_contains": null,
+          "reference_id": null,
+          "utr_number": null,
+          "min_amount": null,
+          "min_amount_operator": ">=",
+          "max_amount": null,
+          "max_amount_operator": "<="
+        },
+        "date_range": {
+          "start": "2026-09-05",
+          "end": "2026-09-06",
+          "label": "today"
+        },
+        "group_by": [],
+        "limit": null,
+        "comparison": null
+      },
+      "passed": false,
+      "failures": [
+        "aggregation want sum, got none"
+      ],
+      "metadata": {
+        "model": "qwen3.5:4b",
+        "latency_ms": 6765.664083999582,
+        "prompt_tokens": 231,
+        "completion_tokens": 54,
+        "total_tokens": 285
+      },
+      "previous_passed": false
+    },
+    {
+      "index": 2,
+      "case_id": "parity_02",
+      "segment": "forced_parity",
+      "question": "What is the total available balance across all accounts?",
+      "expected": {
+        "expected_query": {
+          "intent": "account_balance",
+          "metric": "balance",
+          "aggregation": "sum",
+          "filters": {
+            "bank_code": null,
+            "bank_name": null,
+            "account_id": null,
+            "transaction_type": null,
+            "description_contains": null,
+            "reference_id": null,
+            "utr_number": null,
+            "min_amount": null,
+            "min_amount_operator": ">=",
+            "max_amount": null,
+            "max_amount_operator": "<="
+          },
+          "date_range": {
+            "start": "2026-09-05",
+            "end": "2026-09-06"
+          },
+          "group_by": [],
+          "limit": null,
+          "comparison": null
+        }
+      },
+      "output_type": "FinancialQuery",
+      "output": {
+        "intent": "account_balance",
+        "metric": "balance",
+        "aggregation": "sum",
+        "filters": {
+          "bank_code": null,
+          "bank_name": null,
+          "account_id": null,
+          "transaction_type": null,
+          "description_contains": null,
+          "reference_id": null,
+          "utr_number": null,
+          "min_amount": null,
+          "min_amount_operator": ">=",
+          "max_amount": null,
+          "max_amount_operator": "<="
+        },
+        "date_range": {
+          "start": "2026-09-05",
+          "end": "2026-09-06",
+          "label": "today"
+        },
+        "group_by": [],
+        "limit": null,
+        "comparison": null
+      },
+      "passed": true,
+      "failures": [],
+      "metadata": {
+        "model": "qwen3.5:4b",
+        "latency_ms": 3114.339583000401,
+        "prompt_tokens": 235,
+        "completion_tokens": 54,
+        "total_tokens": 289
+      },
+      "previous_passed": true
+    },
+    {
+      "index": 3,
+      "case_id": "parity_03",
+      "segment": "forced_parity",
+      "question": "Count all transactions in August",
+      "expected": {
+        "expected_query": {
+          "intent": "transaction_summary",
+          "metric": "transaction_count",
+          "aggregation": "count",
+          "filters": {
+            "bank_code": null,
+            "bank_name": null,
+            "account_id": null,
+            "transaction_type": null,
+            "description_contains": null,
+            "reference_id": null,
+            "utr_number": null,
+            "min_amount": null,
+            "min_amount_operator": ">=",
+            "max_amount": null,
+            "max_amount_operator": "<="
+          },
+          "date_range": {
+            "start": "2026-08-01",
+            "end": "2026-09-01"
+          },
+          "group_by": [],
+          "limit": null,
+          "comparison": null
+        }
+      },
+      "output_type": "FinancialQuery",
+      "output": {
+        "intent": "transaction_summary",
+        "metric": "transaction_count",
+        "aggregation": "count",
+        "filters": {
+          "bank_code": null,
+          "bank_name": null,
+          "account_id": null,
+          "transaction_type": null,
+          "description_contains": null,
+          "reference_id": null,
+          "utr_number": null,
+          "min_amount": null,
+          "min_amount_operator": ">=",
+          "max_amount": null,
+          "max_amount_operator": "<="
+        },
+        "date_range": {
+          "start": "2026-08-01",
+          "end": "2026-09-01",
+          "label": "August 2026"
+        },
+        "group_by": [],
+        "limit": null,
+        "comparison": null
+      },
+      "passed": true,
+      "failures": [],
+      "metadata": {
+        "model": "qwen3.5:4b",
+        "latency_ms": 2978.7460829829797,
+        "prompt_tokens": 230,
+        "completion_tokens": 53,
+        "total_tokens": 283
+      },
+      "previous_passed": true
+    },
+    {
+      "index": 4,
+      "case_id": "parity_04",
+      "segment": "forced_parity",
+      "question": "List August debits",
+      "expected": {
+        "expected_query": {
+          "intent": "transaction_list",
+          "metric": "transaction_count",
+          "aggregation": "none",
+          "filters": {
+            "bank_code": null,
+            "bank_name": null,
+            "account_id": null,
+            "transaction_type": "debit",
+            "description_contains": null,
+            "reference_id": null,
+            "utr_number": null,
+            "min_amount": null,
+            "min_amount_operator": ">=",
+            "max_amount": null,
+            "max_amount_operator": "<="
+          },
+          "date_range": {
+            "start": "2026-08-01",
+            "end": "2026-09-01"
+          },
+          "group_by": [],
+          "limit": 20,
+          "comparison": null
+        }
+      },
+      "output_type": "FinancialQuery",
+      "output": {
+        "intent": "transaction_summary",
+        "metric": "transaction_amount",
+        "aggregation": "sum",
+        "filters": {
+          "bank_code": null,
+          "bank_name": null,
+          "account_id": null,
+          "transaction_type": "debit",
+          "description_contains": null,
+          "reference_id": null,
+          "utr_number": null,
+          "min_amount": null,
+          "min_amount_operator": ">=",
+          "max_amount": null,
+          "max_amount_operator": "<="
+        },
+        "date_range": {
+          "start": "2026-08-01",
+          "end": "2026-09-01",
+          "label": "August 2026"
+        },
+        "group_by": [],
+        "limit": null,
+        "comparison": null
+      },
+      "passed": false,
+      "failures": [
+        "intent want transaction_list, got transaction_summary",
+        "metric want transaction_count, got transaction_amount",
+        "aggregation want none, got sum",
+        "limit want 20, got None"
+      ],
+      "metadata": {
+        "model": "qwen3.5:4b",
+        "latency_ms": 2977.4271250062156,
+        "prompt_tokens": 229,
+        "completion_tokens": 56,
+        "total_tokens": 285
+      },
+      "previous_passed": false
+    },
+    {
+      "index": 5,
+      "case_id": "parity_05",
+      "segment": "forced_parity",
+      "question": "Sum my credits in August",
+      "expected": {
+        "expected_query": {
+          "intent": "transaction_summary",
+          "metric": "transaction_amount",
+          "aggregation": "sum",
+          "filters": {
+            "bank_code": null,
+            "bank_name": null,
+            "account_id": null,
+            "transaction_type": "credit",
+            "description_contains": null,
+            "reference_id": null,
+            "utr_number": null,
+            "min_amount": null,
+            "min_amount_operator": ">=",
+            "max_amount": null,
+            "max_amount_operator": "<="
+          },
+          "date_range": {
+            "start": "2026-08-01",
+            "end": "2026-09-01"
+          },
+          "group_by": [],
+          "limit": null,
+          "comparison": null
+        }
+      },
+      "output_type": "FinancialQuery",
+      "output": {
+        "intent": "transaction_summary",
+        "metric": "transaction_amount",
+        "aggregation": "sum",
+        "filters": {
+          "bank_code": null,
+          "bank_name": null,
+          "account_id": null,
+          "transaction_type": "credit",
+          "description_contains": null,
+          "reference_id": null,
+          "utr_number": null,
+          "min_amount": null,
+          "min_amount_operator": ">=",
+          "max_amount": null,
+          "max_amount_operator": "<="
+        },
+        "date_range": {
+          "start": "2026-08-01",
+          "end": "2026-09-01",
+          "label": "August 2026"
+        },
+        "group_by": [],
+        "limit": null,
+        "comparison": null
+      },
+      "passed": true,
+      "failures": [],
+      "metadata": {
+        "model": "qwen3.5:4b",
+        "latency_ms": 2973.500874999445,
+        "prompt_tokens": 230,
+        "completion_tokens": 56,
+        "total_tokens": 286
+      },
+      "previous_passed": true
+    },
+    {
+      "index": 6,
+      "case_id": "parity_06",
+      "segment": "forced_parity",
+      "question": "What is the balance of my HDFC account?",
+      "expected": {
+        "expected_query": {
+          "intent": "account_balance",
+          "metric": "balance",
+          "aggregation": "sum",
+          "filters": {
+            "bank_code": "HDFC",
+            "bank_name": null,
+            "account_id": null,
+            "transaction_type": null,
+            "description_contains": null,
+            "reference_id": null,
+            "utr_number": null,
+            "min_amount": null,
+            "min_amount_operator": ">=",
+            "max_amount": null,
+            "max_amount_operator": "<="
+          },
+          "date_range": {
+            "start": "2026-09-05",
+            "end": "2026-09-06"
+          },
+          "group_by": [],
+          "limit": null,
+          "comparison": null
+        }
+      },
+      "output_type": "QueryRefusal",
+      "output": {
+        "reason": "invalid_structure",
+        "message": "max_amount_operator requires max_amount.",
+        "suggestions": [],
+        "supported_capabilities": [
+          "Metrics: transaction_amount, transaction_count, balance",
+          "Filters: bank_code, bank_name, account_id, transaction_type (credit|debit), description_contains, reference_id, utr_number, min_amount, max_amount",
+          "Intents: transaction_summary, transaction_list, comparison, account_balance, reference_lookup"
+        ]
+      },
+      "passed": false,
+      "failures": [
+        "expected query, got invalid_structure"
+      ],
+      "metadata": {
+        "model": "qwen3.5:4b",
+        "latency_ms": 3961.6987079789396,
+        "prompt_tokens": 235,
+        "completion_tokens": 80,
+        "total_tokens": 315
+      },
+      "previous_passed": false
+    },
+    {
+      "index": 7,
+      "case_id": "parity_07",
+      "segment": "forced_parity",
+      "question": "How much did I spend last month?",
+      "expected": {
+        "expected_query": {
+          "intent": "transaction_summary",
+          "metric": "transaction_amount",
+          "aggregation": "sum",
+          "filters": {
+            "bank_code": null,
+            "bank_name": null,
+            "account_id": null,
+            "transaction_type": "debit",
+            "description_contains": null,
+            "reference_id": null,
+            "utr_number": null,
+            "min_amount": null,
+            "min_amount_operator": ">=",
+            "max_amount": null,
+            "max_amount_operator": "<="
+          },
+          "date_range": {
+            "start": "2026-08-01",
+            "end": "2026-09-01"
+          },
+          "group_by": [],
+          "limit": null,
+          "comparison": null
+        }
+      },
+      "output_type": "FinancialQuery",
+      "output": {
+        "intent": "transaction_summary",
+        "metric": "transaction_amount",
+        "aggregation": "sum",
+        "filters": {
+          "bank_code": null,
+          "bank_name": null,
+          "account_id": null,
+          "transaction_type": "debit",
+          "description_contains": null,
+          "reference_id": null,
+          "utr_number": null,
+          "min_amount": null,
+          "min_amount_operator": ">=",
+          "max_amount": null,
+          "max_amount_operator": "<="
+        },
+        "date_range": {
+          "start": "2026-08-01",
+          "end": "2026-09-01",
+          "label": "August 2026"
+        },
+        "group_by": [],
+        "limit": null,
+        "comparison": null
+      },
+      "passed": true,
+      "failures": [],
+      "metadata": {
+        "model": "qwen3.5:4b",
+        "latency_ms": 2966.89879099722,
+        "prompt_tokens": 233,
+        "completion_tokens": 56,
+        "total_tokens": 289
+      },
+      "previous_passed": true
+    },
+    {
+      "index": 8,
+      "case_id": "parity_08",
+      "segment": "forced_parity",
+      "question": "How much money came in last month?",
+      "expected": {
+        "expected_query": {
+          "intent": "transaction_summary",
+          "metric": "transaction_amount",
+          "aggregation": "sum",
+          "filters": {
+            "bank_code": null,
+            "bank_name": null,
+            "account_id": null,
+            "transaction_type": "credit",
+            "description_contains": null,
+            "reference_id": null,
+            "utr_number": null,
+            "min_amount": null,
+            "min_amount_operator": ">=",
+            "max_amount": null,
+            "max_amount_operator": "<="
+          },
+          "date_range": {
+            "start": "2026-08-01",
+            "end": "2026-09-01"
+          },
+          "group_by": [],
+          "limit": null,
+          "comparison": null
+        }
+      },
+      "output_type": "FinancialQuery",
+      "output": {
+        "intent": "transaction_summary",
+        "metric": "transaction_amount",
+        "aggregation": "sum",
+        "filters": {
+          "bank_code": null,
+          "bank_name": null,
+          "account_id": null,
+          "transaction_type": "credit",
+          "description_contains": null,
+          "reference_id": null,
+          "utr_number": null,
+          "min_amount": null,
+          "min_amount_operator": ">=",
+          "max_amount": null,
+          "max_amount_operator": "<="
+        },
+        "date_range": {
+          "start": "2026-08-01",
+          "end": "2026-09-01",
+          "label": "August 2026"
+        },
+        "group_by": [],
+        "limit": null,
+        "comparison": null
+      },
+      "passed": true,
+      "failures": [],
+      "metadata": {
+        "model": "qwen3.5:4b",
+        "latency_ms": 2962.902708008187,
+        "prompt_tokens": 233,
+        "completion_tokens": 56,
+        "total_tokens": 289
+      },
+      "previous_passed": true
+    },
+    {
+      "index": 9,
+      "case_id": "parity_09",
+      "segment": "forced_parity",
+      "question": "How much did I spend in June?",
+      "expected": {
+        "expected_query": {
+          "intent": "transaction_summary",
+          "metric": "transaction_amount",
+          "aggregation": "sum",
+          "filters": {
+            "bank_code": null,
+            "bank_name": null,
+            "account_id": null,
+            "transaction_type": "debit",
+            "description_contains": null,
+            "reference_id": null,
+            "utr_number": null,
+            "min_amount": null,
+            "min_amount_operator": ">=",
+            "max_amount": null,
+            "max_amount_operator": "<="
+          },
+          "date_range": {
+            "start": "2026-06-01",
+            "end": "2026-07-01"
+          },
+          "group_by": [],
+          "limit": null,
+          "comparison": null
+        }
+      },
+      "output_type": "FinancialQuery",
+      "output": {
+        "intent": "transaction_summary",
+        "metric": "transaction_amount",
+        "aggregation": "sum",
+        "filters": {
+          "bank_code": null,
+          "bank_name": null,
+          "account_id": null,
+          "transaction_type": "debit",
+          "description_contains": null,
+          "reference_id": null,
+          "utr_number": null,
+          "min_amount": null,
+          "min_amount_operator": ">=",
+          "max_amount": null,
+          "max_amount_operator": "<="
+        },
+        "date_range": {
+          "start": "2026-08-01",
+          "end": "2026-09-01",
+          "label": "August 2026"
+        },
+        "group_by": [],
+        "limit": null,
+        "comparison": null
+      },
+      "passed": false,
+      "failures": [
+        "date_range want [2026-06-01, 2026-07-01), got [2026-08-01, 2026-09-01)"
+      ],
+      "metadata": {
+        "model": "qwen3.5:4b",
+        "latency_ms": 3013.5249580198433,
+        "prompt_tokens": 233,
+        "completion_tokens": 56,
+        "total_tokens": 289
+      },
+      "previous_passed": false
+    },
+    {
+      "index": 10,
+      "case_id": "parity_10",
+      "segment": "forced_parity",
+      "question": "Show my largest transactions.",
+      "expected": {
+        "expected_query": {
+          "intent": "transaction_list",
+          "metric": "transaction_amount",
+          "aggregation": "none",
+          "filters": {
+            "bank_code": null,
+            "bank_name": null,
+            "account_id": null,
+            "transaction_type": null,
+            "description_contains": null,
+            "reference_id": null,
+            "utr_number": null,
+            "min_amount": null,
+            "min_amount_operator": ">=",
+            "max_amount": null,
+            "max_amount_operator": "<="
+          },
+          "date_range": {
+            "start": "1900-01-01",
+            "end": "2100-12-31"
+          },
+          "group_by": [],
+          "limit": 10,
+          "comparison": null
+        }
+      },
+      "output_type": "QueryRefusal",
+      "output": {
+        "reason": "invalid_structure",
+        "message": "limit is only executable for list queries.",
+        "suggestions": [],
+        "supported_capabilities": [
+          "Metrics: transaction_amount, transaction_count, balance",
+          "Filters: bank_code, bank_name, account_id, transaction_type (credit|debit), description_contains, reference_id, utr_number, min_amount, max_amount",
+          "Intents: transaction_summary, transaction_list, comparison, account_balance, reference_lookup"
+        ]
+      },
+      "passed": false,
+      "failures": [
+        "expected query, got invalid_structure"
+      ],
+      "metadata": {
+        "model": "qwen3.5:4b",
+        "latency_ms": 3209.4090830069035,
+        "prompt_tokens": 230,
+        "completion_tokens": 57,
+        "total_tokens": 287
+      },
+      "previous_passed": false
+    },
+    {
+      "index": 11,
+      "case_id": "parity_11",
+      "segment": "forced_parity",
+      "question": "What were my biggest debit transactions?",
+      "expected": {
+        "expected_query": {
+          "intent": "transaction_list",
+          "metric": "transaction_amount",
+          "aggregation": "none",
+          "filters": {
+            "bank_code": null,
+            "bank_name": null,
+            "account_id": null,
+            "transaction_type": "debit",
+            "description_contains": null,
+            "reference_id": null,
+            "utr_number": null,
+            "min_amount": null,
+            "min_amount_operator": ">=",
+            "max_amount": null,
+            "max_amount_operator": "<="
+          },
+          "date_range": {
+            "start": "1900-01-01",
+            "end": "2100-12-31"
+          },
+          "group_by": [],
+          "limit": 10,
+          "comparison": null
+        }
+      },
+      "output_type": "QueryRefusal",
+      "output": {
+        "reason": "invalid_structure",
+        "message": "limit is only executable for list queries.",
+        "suggestions": [],
+        "supported_capabilities": [
+          "Metrics: transaction_amount, transaction_count, balance",
+          "Filters: bank_code, bank_name, account_id, transaction_type (credit|debit), description_contains, reference_id, utr_number, min_amount, max_amount",
+          "Intents: transaction_summary, transaction_list, comparison, account_balance, reference_lookup"
+        ]
+      },
+      "passed": false,
+      "failures": [
+        "expected query, got invalid_structure"
+      ],
+      "metadata": {
+        "model": "qwen3.5:4b",
+        "latency_ms": 3091.7899170017336,
+        "prompt_tokens": 232,
+        "completion_tokens": 56,
+        "total_tokens": 288
+      },
+      "previous_passed": false
+    },
+    {
+      "index": 12,
+      "case_id": "parity_12",
+      "segment": "forced_parity",
+      "question": "How many transactions happened last month?",
+      "expected": {
+        "expected_query": {
+          "intent": "transaction_summary",
+          "metric": "transaction_count",
+          "aggregation": "count",
+          "filters": {
+            "bank_code": null,
+            "bank_name": null,
+            "account_id": null,
+            "transaction_type": null,
+            "description_contains": null,
+            "reference_id": null,
+            "utr_number": null,
+            "min_amount": null,
+            "min_amount_operator": ">=",
+            "max_amount": null,
+            "max_amount_operator": "<="
+          },
+          "date_range": {
+            "start": "2026-08-01",
+            "end": "2026-09-01"
+          },
+          "group_by": [],
+          "limit": null,
+          "comparison": null
+        }
+      },
+      "output_type": "FinancialQuery",
+      "output": {
+        "intent": "transaction_summary",
+        "metric": "transaction_count",
+        "aggregation": "count",
+        "filters": {
+          "bank_code": null,
+          "bank_name": null,
+          "account_id": null,
+          "transaction_type": null,
+          "description_contains": null,
+          "reference_id": null,
+          "utr_number": null,
+          "min_amount": null,
+          "min_amount_operator": ">=",
+          "max_amount": null,
+          "max_amount_operator": "<="
+        },
+        "date_range": {
+          "start": "2026-08-01",
+          "end": "2026-09-01",
+          "label": "August 2026"
+        },
+        "group_by": [],
+        "limit": null,
+        "comparison": null
+      },
+      "passed": true,
+      "failures": [],
+      "metadata": {
+        "model": "qwen3.5:4b",
+        "latency_ms": 3399.2704580014106,
+        "prompt_tokens": 232,
+        "completion_tokens": 53,
+        "total_tokens": 285
+      },
+      "previous_passed": true
+    },
+    {
+      "index": 13,
+      "case_id": "parity_13",
+      "segment": "forced_parity",
+      "question": "Show transactions above \u20b950,000.",
+      "expected": {
+        "expected_query": {
+          "intent": "transaction_list",
+          "metric": "transaction_count",
+          "aggregation": "none",
+          "filters": {
+            "bank_code": null,
+            "bank_name": null,
+            "account_id": null,
+            "transaction_type": null,
+            "description_contains": null,
+            "reference_id": null,
+            "utr_number": null,
+            "min_amount": "50000",
+            "min_amount_operator": ">",
+            "max_amount": null,
+            "max_amount_operator": "<="
+          },
+          "date_range": {
+            "start": "1900-01-01",
+            "end": "2100-12-31"
+          },
+          "group_by": [],
+          "limit": 20,
+          "comparison": null
+        }
+      },
+      "output_type": "QueryRefusal",
+      "output": {
+        "reason": "invalid_structure",
+        "message": "max_amount_operator requires max_amount.",
+        "suggestions": [],
+        "supported_capabilities": [
+          "Metrics: transaction_amount, transaction_count, balance",
+          "Filters: bank_code, bank_name, account_id, transaction_type (credit|debit), description_contains, reference_id, utr_number, min_amount, max_amount",
+          "Intents: transaction_summary, transaction_list, comparison, account_balance, reference_lookup"
+        ]
+      },
+      "passed": false,
+      "failures": [
+        "expected query, got invalid_structure"
+      ],
+      "metadata": {
+        "model": "qwen3.5:4b",
+        "latency_ms": 4724.632083001779,
+        "prompt_tokens": 236,
+        "completion_tokens": 81,
+        "total_tokens": 317
+      },
+      "previous_passed": false
+    },
+    {
+      "index": 14,
+      "case_id": "parity_14",
+      "segment": "forced_parity",
+      "question": "What did I spend at Selection Electronics?",
+      "expected": {
+        "expected_query": {
+          "intent": "transaction_summary",
+          "metric": "transaction_amount",
+          "aggregation": "sum",
+          "filters": {
+            "bank_code": null,
+            "bank_name": null,
+            "account_id": null,
+            "transaction_type": "debit",
+            "description_contains": "SELECTION ELECTRONICS",
+            "reference_id": null,
+            "utr_number": null,
+            "min_amount": null,
+            "min_amount_operator": ">=",
+            "max_amount": null,
+            "max_amount_operator": "<="
+          },
+          "date_range": {
+            "start": "1900-01-01",
+            "end": "2100-12-31"
+          },
+          "group_by": [],
+          "limit": null,
+          "comparison": null
+        }
+      },
+      "output_type": "QueryRefusal",
+      "output": {
+        "reason": "invalid_structure",
+        "message": "Invalid reference ID.",
+        "suggestions": [],
+        "supported_capabilities": [
+          "Metrics: transaction_amount, transaction_count, balance",
+          "Filters: bank_code, bank_name, account_id, transaction_type (credit|debit), description_contains, reference_id, utr_number, min_amount, max_amount",
+          "Intents: transaction_summary, transaction_list, comparison, account_balance, reference_lookup"
+        ]
+      },
+      "passed": false,
+      "failures": [
+        "expected query, got invalid_structure"
+      ],
+      "metadata": {
+        "model": "qwen3.5:4b",
+        "latency_ms": 3731.3781249977183,
+        "prompt_tokens": 233,
+        "completion_tokens": 62,
+        "total_tokens": 295
+      },
+      "previous_passed": false
+    },
+    {
+      "index": 15,
+      "case_id": "parity_15",
+      "segment": "forced_parity",
+      "question": "Show all transactions containing Reliance.",
+      "expected": {
+        "expected_query": {
+          "intent": "transaction_list",
+          "metric": "transaction_count",
+          "aggregation": "none",
+          "filters": {
+            "bank_code": null,
+            "bank_name": null,
+            "account_id": null,
+            "transaction_type": null,
+            "description_contains": "RELIANCE",
+            "reference_id": null,
+            "utr_number": null,
+            "min_amount": null,
+            "min_amount_operator": ">=",
+            "max_amount": null,
+            "max_amount_operator": "<="
+          },
+          "date_range": {
+            "start": "1900-01-01",
+            "end": "2100-12-31"
+          },
+          "group_by": [],
+          "limit": 20,
+          "comparison": null
+        }
+      },
+      "output_type": "FinancialQuery",
+      "output": {
+        "intent": "transaction_list",
+        "metric": "transaction_amount",
+        "aggregation": "sum",
+        "filters": {
+          "bank_code": null,
+          "bank_name": null,
+          "account_id": null,
+          "transaction_type": null,
+          "description_contains": null,
+          "reference_id": "Reliance",
+          "utr_number": null,
+          "min_amount": null,
+          "min_amount_operator": ">=",
+          "max_amount": null,
+          "max_amount_operator": "<="
+        },
+        "date_range": {
+          "start": "1900-01-01",
+          "end": "2100-12-31",
+          "label": "all time"
+        },
+        "group_by": [],
+        "limit": 20,
+        "comparison": null
+      },
+      "passed": false,
+      "failures": [
+        "metric want transaction_count, got transaction_amount",
+        "aggregation want none, got sum",
+        "filter description_contains want 'RELIANCE', got None (case-insensitive)",
+        "filter reference_id want None, got 'Reliance'"
+      ],
+      "metadata": {
+        "model": "qwen3.5:4b",
+        "latency_ms": 3536.368457978824,
+        "prompt_tokens": 232,
+        "completion_tokens": 57,
+        "total_tokens": 289
+      },
+      "previous_passed": false
+    },
+    {
+      "index": 16,
+      "case_id": "parity_16",
+      "segment": "forced_parity",
+      "question": "How many transactions above 50000 in August?",
+      "expected": {
+        "expected_query": {
+          "intent": "transaction_summary",
+          "metric": "transaction_count",
+          "aggregation": "count",
+          "filters": {
+            "bank_code": null,
+            "bank_name": null,
+            "account_id": null,
+            "transaction_type": null,
+            "description_contains": null,
+            "reference_id": null,
+            "utr_number": null,
+            "min_amount": "50000",
+            "min_amount_operator": ">",
+            "max_amount": null,
+            "max_amount_operator": "<="
+          },
+          "date_range": {
+            "start": "2026-08-01",
+            "end": "2026-09-01"
+          },
+          "group_by": [],
+          "limit": null,
+          "comparison": null
+        }
+      },
+      "output_type": "FinancialQuery",
+      "output": {
+        "intent": "transaction_summary",
+        "metric": "transaction_count",
+        "aggregation": "count",
+        "filters": {
+          "bank_code": null,
+          "bank_name": null,
+          "account_id": null,
+          "transaction_type": null,
+          "description_contains": null,
+          "reference_id": null,
+          "utr_number": null,
+          "min_amount": "50000",
+          "min_amount_operator": ">=",
+          "max_amount": null,
+          "max_amount_operator": "<="
+        },
+        "date_range": {
+          "start": "2026-08-01",
+          "end": "2026-09-01",
+          "label": "August 2026"
+        },
+        "group_by": [],
+        "limit": null,
+        "comparison": null
+      },
+      "passed": false,
+      "failures": [
+        "filter min_amount_operator want '>', got '>='"
+      ],
+      "metadata": {
+        "model": "qwen3.5:4b",
+        "latency_ms": 3997.270916996058,
+        "prompt_tokens": 238,
+        "completion_tokens": 65,
+        "total_tokens": 303
+      },
+      "previous_passed": false
+    },
+    {
+      "index": 17,
+      "case_id": "parity_17",
+      "segment": "forced_parity",
+      "question": "How many transactions at most 50000 all time?",
+      "expected": {
+        "expected_query": {
+          "intent": "transaction_summary",
+          "metric": "transaction_count",
+          "aggregation": "count",
+          "filters": {
+            "bank_code": null,
+            "bank_name": null,
+            "account_id": null,
+            "transaction_type": null,
+            "description_contains": null,
+            "reference_id": null,
+            "utr_number": null,
+            "min_amount": null,
+            "min_amount_operator": ">=",
+            "max_amount": "50000",
+            "max_amount_operator": "<="
+          },
+          "date_range": {
+            "start": "1900-01-01",
+            "end": "2100-12-31"
+          },
+          "group_by": [],
+          "limit": null,
+          "comparison": null
+        }
+      },
+      "output_type": "FinancialQuery",
+      "output": {
+        "intent": "transaction_summary",
+        "metric": "transaction_count",
+        "aggregation": "count",
+        "filters": {
+          "bank_code": null,
+          "bank_name": null,
+          "account_id": null,
+          "transaction_type": null,
+          "description_contains": null,
+          "reference_id": null,
+          "utr_number": null,
+          "min_amount": null,
+          "min_amount_operator": ">=",
+          "max_amount": "50000",
+          "max_amount_operator": "<="
+        },
+        "date_range": {
+          "start": "1900-01-01",
+          "end": "2100-12-31",
+          "label": "all time"
+        },
+        "group_by": [],
+        "limit": null,
+        "comparison": null
+      },
+      "passed": true,
+      "failures": [],
+      "metadata": {
+        "model": "qwen3.5:4b",
+        "latency_ms": 4497.390750009799,
+        "prompt_tokens": 239,
+        "completion_tokens": 77,
+        "total_tokens": 316
+      },
+      "previous_passed": true
+    },
+    {
+      "index": 18,
+      "case_id": "parity_18",
+      "segment": "forced_parity",
+      "question": "How much money do I have in HDFC?",
+      "expected": {
+        "expected_query": {
+          "intent": "account_balance",
+          "metric": "balance",
+          "aggregation": "sum",
+          "filters": {
+            "bank_code": "HDFC",
+            "bank_name": null,
+            "account_id": null,
+            "transaction_type": null,
+            "description_contains": null,
+            "reference_id": null,
+            "utr_number": null,
+            "min_amount": null,
+            "min_amount_operator": ">=",
+            "max_amount": null,
+            "max_amount_operator": "<="
+          },
+          "date_range": {
+            "start": "2026-09-05",
+            "end": "2026-09-06"
+          },
+          "group_by": [],
+          "limit": null,
+          "comparison": null
+        }
+      },
+      "output_type": "QueryRefusal",
+      "output": {
+        "reason": "invalid_structure",
+        "message": "Filters are not applicable to account_balance: bank_name.",
+        "suggestions": [],
+        "supported_capabilities": [
+          "Metrics: transaction_amount, transaction_count, balance",
+          "Filters: bank_code, bank_name, account_id, transaction_type (credit|debit), description_contains, reference_id, utr_number, min_amount, max_amount",
+          "Intents: transaction_summary, transaction_list, comparison, account_balance, reference_lookup"
+        ]
+      },
+      "passed": false,
+      "failures": [
+        "expected query, got invalid_structure"
+      ],
+      "metadata": {
+        "model": "qwen3.5:4b",
+        "latency_ms": 3630.788999987999,
+        "prompt_tokens": 235,
+        "completion_tokens": 56,
+        "total_tokens": 291
+      },
+      "previous_passed": false
+    },
+    {
+      "index": 19,
+      "case_id": "parity_19",
+      "segment": "forced_parity",
+      "question": "How much did I spend from Axis in August?",
+      "expected": {
+        "expected_query": {
+          "intent": "transaction_summary",
+          "metric": "transaction_amount",
+          "aggregation": "sum",
+          "filters": {
+            "bank_code": "UTIB",
+            "bank_name": null,
+            "account_id": null,
+            "transaction_type": "debit",
+            "description_contains": null,
+            "reference_id": null,
+            "utr_number": null,
+            "min_amount": null,
+            "min_amount_operator": ">=",
+            "max_amount": null,
+            "max_amount_operator": "<="
+          },
+          "date_range": {
+            "start": "2026-08-01",
+            "end": "2026-09-01"
+          },
+          "group_by": [],
+          "limit": null,
+          "comparison": null
+        }
+      },
+      "output_type": "FinancialQuery",
+      "output": {
+        "intent": "transaction_summary",
+        "metric": "transaction_amount",
+        "aggregation": "sum",
+        "filters": {
+          "bank_code": null,
+          "bank_name": null,
+          "account_id": null,
+          "transaction_type": "debit",
+          "description_contains": null,
+          "reference_id": "Axis",
+          "utr_number": null,
+          "min_amount": null,
+          "min_amount_operator": ">=",
+          "max_amount": null,
+          "max_amount_operator": "<="
+        },
+        "date_range": {
+          "start": "2026-08-01",
+          "end": "2026-09-01",
+          "label": "August 2026"
+        },
+        "group_by": [],
+        "limit": null,
+        "comparison": null
+      },
+      "passed": false,
+      "failures": [
+        "filter bank_code want 'UTIB', got None",
+        "filter reference_id want None, got 'Axis'"
+      ],
+      "metadata": {
+        "model": "qwen3.5:4b",
+        "latency_ms": 3725.8669169968925,
+        "prompt_tokens": 235,
+        "completion_tokens": 61,
+        "total_tokens": 296
+      },
+      "previous_passed": false
+    },
+    {
+      "index": 20,
+      "case_id": "parity_20",
+      "segment": "forced_parity",
+      "question": "List transactions all time for account fc320eb6-f2aa-54d4-8c11-a60207eec18f",
+      "expected": {
+        "expected_query": {
+          "intent": "transaction_list",
+          "metric": "transaction_count",
+          "aggregation": "none",
+          "filters": {
+            "bank_code": null,
+            "bank_name": null,
+            "account_id": "fc320eb6-f2aa-54d4-8c11-a60207eec18f",
+            "transaction_type": null,
+            "description_contains": null,
+            "reference_id": null,
+            "utr_number": null,
+            "min_amount": null,
+            "min_amount_operator": ">=",
+            "max_amount": null,
+            "max_amount_operator": "<="
+          },
+          "date_range": {
+            "start": "1900-01-01",
+            "end": "2100-12-31"
+          },
+          "group_by": [],
+          "limit": 20,
+          "comparison": null
+        }
+      },
+      "output_type": "FinancialQuery",
+      "output": {
+        "intent": "transaction_list",
+        "metric": "transaction_amount",
+        "aggregation": "sum",
+        "filters": {
+          "bank_code": null,
+          "bank_name": null,
+          "account_id": "fc320eb6-f2aa-54d4-8c11-a60207eec18f",
+          "transaction_type": null,
+          "description_contains": null,
+          "reference_id": null,
+          "utr_number": null,
+          "min_amount": null,
+          "min_amount_operator": ">=",
+          "max_amount": null,
+          "max_amount_operator": "<="
+        },
+        "date_range": {
+          "start": "1900-01-01",
+          "end": "2100-12-31",
+          "label": "all time"
+        },
+        "group_by": [],
+        "limit": 20,
+        "comparison": null
+      },
+      "passed": false,
+      "failures": [
+        "metric want transaction_count, got transaction_amount",
+        "aggregation want none, got sum"
+      ],
+      "metadata": {
+        "model": "qwen3.5:4b",
+        "latency_ms": 3732.078583998373,
+        "prompt_tokens": 237,
+        "completion_tokens": 61,
+        "total_tokens": 298
+      },
+      "previous_passed": false
+    },
+    {
+      "index": 21,
+      "case_id": "parity_21",
+      "segment": "forced_parity",
+      "question": "Show all transactions from my SBI accounts.",
+      "expected": {
+        "expected_query": {
+          "intent": "transaction_list",
+          "metric": "transaction_count",
+          "aggregation": "none",
+          "filters": {
+            "bank_code": "SBIN",
+            "bank_name": null,
+            "account_id": null,
+            "transaction_type": null,
+            "description_contains": null,
+            "reference_id": null,
+            "utr_number": null,
+            "min_amount": null,
+            "min_amount_operator": ">=",
+            "max_amount": null,
+            "max_amount_operator": "<="
+          },
+          "date_range": {
+            "start": "1900-01-01",
+            "end": "2100-12-31"
+          },
+          "group_by": [],
+          "limit": 20,
+          "comparison": null
+        }
+      },
+      "output_type": "FinancialQuery",
+      "output": {
+        "intent": "transaction_list",
+        "metric": "transaction_amount",
+        "aggregation": "sum",
+        "filters": {
+          "bank_code": null,
+          "bank_name": null,
+          "account_id": null,
+          "transaction_type": null,
+          "description_contains": null,
+          "reference_id": null,
+          "utr_number": null,
+          "min_amount": null,
+          "min_amount_operator": ">=",
+          "max_amount": null,
+          "max_amount_operator": "<="
+        },
+        "date_range": {
+          "start": "1900-01-01",
+          "end": "2100-12-31",
+          "label": "all time"
+        },
+        "group_by": [],
+        "limit": 20,
+        "comparison": null
+      },
+      "passed": false,
+      "failures": [
+        "metric want transaction_count, got transaction_amount",
+        "aggregation want none, got sum",
+        "filter bank_code want 'SBIN', got None"
+      ],
+      "metadata": {
+        "model": "qwen3.5:4b",
+        "latency_ms": 3728.3255420043133,
+        "prompt_tokens": 234,
+        "completion_tokens": 61,
+        "total_tokens": 295
+      },
+      "previous_passed": false
+    },
+    {
+      "index": 22,
+      "case_id": "parity_22",
+      "segment": "forced_parity",
+      "question": "Find transaction reference 1715499972.",
+      "expected": {
+        "expected_query": {
+          "intent": "reference_lookup",
+          "metric": "transaction_count",
+          "aggregation": "none",
+          "filters": {
+            "bank_code": null,
+            "bank_name": null,
+            "account_id": null,
+            "transaction_type": null,
+            "description_contains": null,
+            "reference_id": "1715499972",
+            "utr_number": null,
+            "min_amount": null,
+            "min_amount_operator": ">=",
+            "max_amount": null,
+            "max_amount_operator": "<="
+          },
+          "date_range": {
+            "start": "1900-01-01",
+            "end": "2100-12-31"
+          },
+          "group_by": [],
+          "limit": 20,
+          "comparison": null
+        }
+      },
+      "output_type": "FinancialQuery",
+      "output": {
+        "intent": "transaction_summary",
+        "metric": "transaction_amount",
+        "aggregation": "sum",
+        "filters": {
+          "bank_code": null,
+          "bank_name": null,
+          "account_id": null,
+          "transaction_type": null,
+          "description_contains": null,
+          "reference_id": "1715499972",
+          "utr_number": null,
+          "min_amount": null,
+          "min_amount_operator": ">=",
+          "max_amount": null,
+          "max_amount_operator": "<="
+        },
+        "date_range": {
+          "start": "1900-01-01",
+          "end": "2100-12-31",
+          "label": "all time"
+        },
+        "group_by": [],
+        "limit": null,
+        "comparison": null
+      },
+      "passed": false,
+      "failures": [
+        "intent want reference_lookup, got transaction_summary",
+        "metric want transaction_count, got transaction_amount",
+        "aggregation want none, got sum",
+        "limit want 20, got None"
+      ],
+      "metadata": {
+        "model": "qwen3.5:4b",
+        "latency_ms": 3330.6977080064826,
+        "prompt_tokens": 234,
+        "completion_tokens": 59,
+        "total_tokens": 293
+      },
+      "previous_passed": false
+    },
+    {
+      "index": 23,
+      "case_id": "parity_23",
+      "segment": "forced_parity",
+      "question": "Show transaction with reference S5314253.",
+      "expected": {
+        "expected_query": {
+          "intent": "reference_lookup",
+          "metric": "transaction_count",
+          "aggregation": "none",
+          "filters": {
+            "bank_code": null,
+            "bank_name": null,
+            "account_id": null,
+            "transaction_type": null,
+            "description_contains": null,
+            "reference_id": "S5314253",
+            "utr_number": null,
+            "min_amount": null,
+            "min_amount_operator": ">=",
+            "max_amount": null,
+            "max_amount_operator": "<="
+          },
+          "date_range": {
+            "start": "1900-01-01",
+            "end": "2100-12-31"
+          },
+          "group_by": [],
+          "limit": 20,
+          "comparison": null
+        }
+      },
+      "output_type": "FinancialQuery",
+      "output": {
+        "intent": "transaction_summary",
+        "metric": "transaction_amount",
+        "aggregation": "sum",
+        "filters": {
+          "bank_code": null,
+          "bank_name": null,
+          "account_id": null,
+          "transaction_type": null,
+          "description_contains": null,
+          "reference_id": "S5314253",
+          "utr_number": null,
+          "min_amount": null,
+          "min_amount_operator": ">=",
+          "max_amount": null,
+          "max_amount_operator": "<="
+        },
+        "date_range": {
+          "start": "1900-01-01",
+          "end": "2100-12-31",
+          "label": "all time"
+        },
+        "group_by": [],
+        "limit": null,
+        "comparison": null
+      },
+      "passed": false,
+      "failures": [
+        "intent want reference_lookup, got transaction_summary",
+        "metric want transaction_count, got transaction_amount",
+        "aggregation want none, got sum",
+        "limit want 20, got None"
+      ],
+      "metadata": {
+        "model": "qwen3.5:4b",
+        "latency_ms": 3353.143499989528,
+        "prompt_tokens": 235,
+        "completion_tokens": 59,
+        "total_tokens": 294
+      },
+      "previous_passed": false
+    },
+    {
+      "index": 24,
+      "case_id": "parity_24",
+      "segment": "forced_parity",
+      "question": "Find UTR xyz12345678abcdef.",
+      "expected": {
+        "expected_query": {
+          "intent": "reference_lookup",
+          "metric": "transaction_count",
+          "aggregation": "none",
+          "filters": {
+            "bank_code": null,
+            "bank_name": null,
+            "account_id": null,
+            "transaction_type": null,
+            "description_contains": null,
+            "reference_id": null,
+            "utr_number": "xyz12345678abcdef",
+            "min_amount": null,
+            "min_amount_operator": ">=",
+            "max_amount": null,
+            "max_amount_operator": "<="
+          },
+          "date_range": {
+            "start": "1900-01-01",
+            "end": "2100-12-31"
+          },
+          "group_by": [],
+          "limit": 1,
+          "comparison": null
+        }
+      },
+      "output_type": "QueryRefusal",
+      "output": {
+        "reason": "invalid_structure",
+        "message": "Sensitive placeholder is invalid for filter field: reference_id.",
+        "suggestions": [],
+        "supported_capabilities": [
+          "Metrics: transaction_amount, transaction_count, balance",
+          "Filters: bank_code, bank_name, account_id, transaction_type (credit|debit), description_contains, reference_id, utr_number, min_amount, max_amount",
+          "Intents: transaction_summary, transaction_list, comparison, account_balance, reference_lookup"
+        ]
+      },
+      "passed": false,
+      "failures": [
+        "expected query, got invalid_structure"
+      ],
+      "metadata": {
+        "model": "qwen3.5:4b",
+        "latency_ms": 3247.036625019973,
+        "prompt_tokens": 234,
+        "completion_tokens": 59,
+        "total_tokens": 293
+      },
+      "previous_passed": false
+    },
+    {
+      "index": 25,
+      "case_id": "refusal_01",
+      "segment": "safety_refusal",
+      "question": "How much did I pay my employees?",
+      "expected": {
+        "expected_refusal_reason": "unsupported_metric"
+      },
+      "output_type": "FinancialQuery",
+      "output": {
+        "intent": "transaction_summary",
+        "metric": "transaction_amount",
+        "aggregation": "sum",
+        "filters": {
+          "bank_code": null,
+          "bank_name": null,
+          "account_id": null,
+          "transaction_type": "debit",
+          "description_contains": null,
+          "reference_id": null,
+          "utr_number": null,
+          "min_amount": null,
+          "min_amount_operator": ">=",
+          "max_amount": null,
+          "max_amount_operator": "<="
+        },
+        "date_range": {
+          "start": "2026-08-01",
+          "end": "2026-09-01",
+          "label": "August 2026"
+        },
+        "group_by": [],
+        "limit": null,
+        "comparison": null
+      },
+      "passed": false,
+      "failures": [
+        "expected refusal, got query"
+      ],
+      "metadata": {
+        "model": "qwen3.5:4b",
+        "latency_ms": 3112.092291994486,
+        "prompt_tokens": 233,
+        "completion_tokens": 56,
+        "total_tokens": 289
+      },
+      "previous_passed": false
+    },
+    {
+      "index": 26,
+      "case_id": "refusal_02",
+      "segment": "safety_refusal",
+      "question": "What is my profit margin?",
+      "expected": {
+        "expected_refusal_reason": "unsupported_metric"
+      },
+      "output_type": "QueryRefusal",
+      "output": {
+        "reason": "invalid_structure",
+        "message": "Filters are not applicable to account_balance: transaction_type.",
+        "suggestions": [],
+        "supported_capabilities": [
+          "Metrics: transaction_amount, transaction_count, balance",
+          "Filters: bank_code, bank_name, account_id, transaction_type (credit|debit), description_contains, reference_id, utr_number, min_amount, max_amount",
+          "Intents: transaction_summary, transaction_list, comparison, account_balance, reference_lookup"
+        ]
+      },
+      "passed": false,
+      "failures": [
+        "refusal reason want unsupported_metric, got invalid_structure"
+      ],
+      "metadata": {
+        "model": "qwen3.5:4b",
+        "latency_ms": 3258.783917000983,
+        "prompt_tokens": 231,
+        "completion_tokens": 56,
+        "total_tokens": 287
+      },
+      "previous_passed": false
+    },
+    {
+      "index": 27,
+      "case_id": "refusal_03",
+      "segment": "safety_refusal",
+      "question": "Which invoices are overdue?",
+      "expected": {
+        "expected_refusal_reason": "unsupported_metric"
+      },
+      "output_type": "QueryRefusal",
+      "output": {
+        "reason": "invalid_structure",
+        "message": "Filters are not applicable to account_balance: transaction_type.",
+        "suggestions": [],
+        "supported_capabilities": [
+          "Metrics: transaction_amount, transaction_count, balance",
+          "Filters: bank_code, bank_name, account_id, transaction_type (credit|debit), description_contains, reference_id, utr_number, min_amount, max_amount",
+          "Intents: transaction_summary, transaction_list, comparison, account_balance, reference_lookup"
+        ]
+      },
+      "passed": false,
+      "failures": [
+        "refusal reason want unsupported_metric, got invalid_structure"
+      ],
+      "metadata": {
+        "model": "qwen3.5:4b",
+        "latency_ms": 3929.0629999886733,
+        "prompt_tokens": 230,
+        "completion_tokens": 60,
+        "total_tokens": 290
+      },
+      "previous_passed": false
+    },
+    {
+      "index": 28,
+      "case_id": "refusal_04",
+      "segment": "safety_refusal",
+      "question": "what is your name",
+      "expected": {
+        "expected_refusal_reason": "ambiguous"
+      },
+      "output_type": "QueryRefusal",
+      "output": {
+        "reason": "invalid_structure",
+        "message": "Query validation failed: 1 validation error for FinancialQuery\n  Value error, reference_lookup must have aggregation=none [type=value_error, input_value={'intent': <Intent.REFERE...one, 'comparison': None}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.13/v/value_error",
+        "suggestions": [],
+        "supported_capabilities": [
+          "Metrics: transaction_amount, transaction_count, balance",
+          "Filters: bank_code, bank_name, account_id, transaction_type (credit|debit), description_contains, reference_id, utr_number, min_amount, max_amount",
+          "Intents: transaction_summary, transaction_list, comparison, account_balance, reference_lookup"
+        ]
+      },
+      "passed": false,
+      "failures": [
+        "refusal reason want ambiguous, got invalid_structure"
+      ],
+      "metadata": {
+        "model": "qwen3.5:4b",
+        "latency_ms": 3879.166458005784,
+        "prompt_tokens": 229,
+        "completion_tokens": 58,
+        "total_tokens": 287
+      },
+      "previous_passed": false
+    },
+    {
+      "index": 29,
+      "case_id": "refusal_05",
+      "segment": "safety_refusal",
+      "question": "Show spending by month this year",
+      "expected": {
+        "expected_refusal_reason": "capability"
+      },
+      "output_type": "FinancialQuery",
+      "output": {
+        "intent": "transaction_summary",
+        "metric": "transaction_amount",
+        "aggregation": "sum",
+        "filters": {
+          "bank_code": null,
+          "bank_name": null,
+          "account_id": null,
+          "transaction_type": "debit",
+          "description_contains": null,
+          "reference_id": null,
+          "utr_number": null,
+          "min_amount": null,
+          "min_amount_operator": ">=",
+          "max_amount": null,
+          "max_amount_operator": "<="
+        },
+        "date_range": {
+          "start": "2026-08-01",
+          "end": "2026-09-01",
+          "label": "August 2026"
+        },
+        "group_by": [],
+        "limit": null,
+        "comparison": null
+      },
+      "passed": false,
+      "failures": [
+        "expected refusal, got query"
+      ],
+      "metadata": {
+        "model": "qwen3.5:4b",
+        "latency_ms": 3671.416124998359,
+        "prompt_tokens": 231,
+        "completion_tokens": 56,
+        "total_tokens": 287
+      },
+      "previous_passed": false
+    },
+    {
+      "index": 30,
+      "case_id": "refusal_06",
+      "segment": "safety_refusal",
+      "question": "How much did we spend on vendor payouts?",
+      "expected": {
+        "expected_refusal_reason": "unsupported_metric"
+      },
+      "output_type": "QueryRefusal",
+      "output": {
+        "reason": "invalid_structure",
+        "message": "Invalid reference ID.",
+        "suggestions": [],
+        "supported_capabilities": [
+          "Metrics: transaction_amount, transaction_count, balance",
+          "Filters: bank_code, bank_name, account_id, transaction_type (credit|debit), description_contains, reference_id, utr_number, min_amount, max_amount",
+          "Intents: transaction_summary, transaction_list, comparison, account_balance, reference_lookup"
+        ]
+      },
+      "passed": false,
+      "failures": [
+        "refusal reason want unsupported_metric, got invalid_structure"
+      ],
+      "metadata": {
+        "model": "qwen3.5:4b",
+        "latency_ms": 4015.2820000075735,
+        "prompt_tokens": 234,
+        "completion_tokens": 64,
+        "total_tokens": 298
+      },
+      "previous_passed": false
+    },
+    {
+      "index": 31,
+      "case_id": "context_01",
+      "segment": "contextual_fallback",
+      "question": "How much did I spend in August?",
+      "expected": {
+        "context": {
+          "intent": "transaction_summary",
+          "metric": "transaction_amount",
+          "aggregation": "sum",
+          "filters": {
+            "bank_code": null,
+            "bank_name": null,
+            "account_id": null,
+            "transaction_type": "debit",
+            "description_contains": null,
+            "reference_id": null,
+            "utr_number": null,
+            "min_amount": null,
+            "min_amount_operator": ">=",
+            "max_amount": null,
+            "max_amount_operator": "<="
+          },
+          "date_range": {
+            "start": "2026-08-01",
+            "end": "2026-09-01",
+            "label": "August 2026"
+          },
+          "group_by": [],
+          "limit": null,
+          "comparison": null
+        },
+        "expected_query": {
+          "intent": "transaction_summary",
+          "metric": "transaction_amount",
+          "aggregation": "sum",
+          "filters": {
+            "bank_code": null,
+            "bank_name": null,
+            "account_id": null,
+            "transaction_type": "debit",
+            "description_contains": null,
+            "reference_id": null,
+            "utr_number": null,
+            "min_amount": null,
+            "min_amount_operator": ">=",
+            "max_amount": null,
+            "max_amount_operator": "<="
+          },
+          "date_range": {
+            "start": "2026-08-01",
+            "end": "2026-09-01"
+          },
+          "group_by": [],
+          "limit": null,
+          "comparison": null
+        }
+      },
+      "output_type": "FinancialQuery",
+      "output": {
+        "intent": "transaction_summary",
+        "metric": "transaction_amount",
+        "aggregation": "sum",
+        "filters": {
+          "bank_code": null,
+          "bank_name": null,
+          "account_id": null,
+          "transaction_type": "debit",
+          "description_contains": null,
+          "reference_id": null,
+          "utr_number": null,
+          "min_amount": null,
+          "min_amount_operator": ">=",
+          "max_amount": null,
+          "max_amount_operator": "<="
+        },
+        "date_range": {
+          "start": "2026-08-01",
+          "end": "2026-09-01",
+          "label": "August 2026"
+        },
+        "group_by": [],
+        "limit": null,
+        "comparison": null
+      },
+      "passed": true,
+      "failures": [],
+      "metadata": {
+        "model": "qwen3.5:4b",
+        "latency_ms": 3763.9524999831337,
+        "prompt_tokens": 313,
+        "completion_tokens": 56,
+        "total_tokens": 369
+      },
+      "previous_passed": true
+    },
+    {
+      "index": 32,
+      "case_id": "context_02",
+      "segment": "contextual_fallback",
+      "question": "What about July?",
+      "expected": {
+        "context": {
+          "intent": "transaction_summary",
+          "metric": "transaction_amount",
+          "aggregation": "sum",
+          "filters": {
+            "bank_code": null,
+            "bank_name": null,
+            "account_id": null,
+            "transaction_type": "debit",
+            "description_contains": null,
+            "reference_id": null,
+            "utr_number": null,
+            "min_amount": null,
+            "min_amount_operator": ">=",
+            "max_amount": null,
+            "max_amount_operator": "<="
+          },
+          "date_range": {
+            "start": "2026-08-01",
+            "end": "2026-09-01",
+            "label": "August 2026"
+          },
+          "group_by": [],
+          "limit": null,
+          "comparison": null
+        },
+        "expected_query": {
+          "intent": "transaction_summary",
+          "metric": "transaction_amount",
+          "aggregation": "sum",
+          "filters": {
+            "bank_code": null,
+            "bank_name": null,
+            "account_id": null,
+            "transaction_type": "debit",
+            "description_contains": null,
+            "reference_id": null,
+            "utr_number": null,
+            "min_amount": null,
+            "min_amount_operator": ">=",
+            "max_amount": null,
+            "max_amount_operator": "<="
+          },
+          "date_range": {
+            "start": "2026-07-01",
+            "end": "2026-08-01"
+          },
+          "group_by": [],
+          "limit": null,
+          "comparison": null
+        }
+      },
+      "output_type": "FinancialQuery",
+      "output": {
+        "intent": "transaction_summary",
+        "metric": "transaction_amount",
+        "aggregation": "sum",
+        "filters": {
+          "bank_code": null,
+          "bank_name": null,
+          "account_id": null,
+          "transaction_type": "debit",
+          "description_contains": null,
+          "reference_id": null,
+          "utr_number": null,
+          "min_amount": null,
+          "min_amount_operator": ">=",
+          "max_amount": null,
+          "max_amount_operator": "<="
+        },
+        "date_range": {
+          "start": "2026-08-01",
+          "end": "2026-09-01",
+          "label": "August 2026"
+        },
+        "group_by": [],
+        "limit": null,
+        "comparison": null
+      },
+      "passed": false,
+      "failures": [
+        "date_range want [2026-07-01, 2026-08-01), got [2026-08-01, 2026-09-01)"
+      ],
+      "metadata": {
+        "model": "qwen3.5:4b",
+        "latency_ms": 3632.309999986319,
+        "prompt_tokens": 309,
+        "completion_tokens": 56,
+        "total_tokens": 365
+      },
+      "previous_passed": false
+    },
+    {
+      "index": 33,
+      "case_id": "context_03",
+      "segment": "contextual_fallback",
+      "question": "How does that compare with the month before?",
+      "expected": {
+        "context": {
+          "intent": "transaction_summary",
+          "metric": "transaction_amount",
+          "aggregation": "sum",
+          "filters": {
+            "bank_code": null,
+            "bank_name": null,
+            "account_id": null,
+            "transaction_type": "debit",
+            "description_contains": null,
+            "reference_id": null,
+            "utr_number": null,
+            "min_amount": null,
+            "min_amount_operator": ">=",
+            "max_amount": null,
+            "max_amount_operator": "<="
+          },
+          "date_range": {
+            "start": "2026-08-01",
+            "end": "2026-09-01",
+            "label": "August 2026"
+          },
+          "group_by": [],
+          "limit": null,
+          "comparison": null
+        },
+        "expected_query": {
+          "intent": "comparison",
+          "metric": "transaction_amount",
+          "aggregation": "sum",
+          "filters": {
+            "bank_code": null,
+            "bank_name": null,
+            "account_id": null,
+            "transaction_type": "debit",
+            "description_contains": null,
+            "reference_id": null,
+            "utr_number": null,
+            "min_amount": null,
+            "min_amount_operator": ">=",
+            "max_amount": null,
+            "max_amount_operator": "<="
+          },
+          "date_range": {
+            "start": "2026-08-01",
+            "end": "2026-09-01"
+          },
+          "group_by": [],
+          "limit": null,
+          "comparison": {
+            "against": "previous_month",
+            "month": null,
+            "year": null
+          }
+        }
+      },
+      "output_type": "FinancialQuery",
+      "output": {
+        "intent": "transaction_summary",
+        "metric": "transaction_amount",
+        "aggregation": "sum",
+        "filters": {
+          "bank_code": null,
+          "bank_name": null,
+          "account_id": null,
+          "transaction_type": "debit",
+          "description_contains": null,
+          "reference_id": null,
+          "utr_number": null,
+          "min_amount": null,
+          "min_amount_operator": ">=",
+          "max_amount": null,
+          "max_amount_operator": "<="
+        },
+        "date_range": {
+          "start": "2026-08-01",
+          "end": "2026-09-01",
+          "label": "August 2026"
+        },
+        "group_by": [],
+        "limit": null,
+        "comparison": {
+          "against": "previous_month",
+          "month": null,
+          "year": null
+        }
+      },
+      "passed": false,
+      "failures": [
+        "intent want comparison, got transaction_summary"
+      ],
+      "metadata": {
+        "model": "qwen3.5:4b",
+        "latency_ms": 3825.8481670054607,
+        "prompt_tokens": 314,
+        "completion_tokens": 59,
+        "total_tokens": 373
+      },
+      "previous_passed": false
+    }
+  ]
+}

@@ -4,7 +4,7 @@ import pytest
 from datetime import date
 from app.conversation import ConversationContext
 from app.understanding.rules import understand_question
-from app.schemas.financial_query import FinancialQuery, QueryRefusal, Intent
+from app.schemas.financial_query import FinancialQuery, QueryRefusal, Intent, Metric
 
 
 def parse_q(question, context=None):
@@ -24,8 +24,18 @@ def test_balance():
     assert result.intent == Intent.ACCOUNT_BALANCE
 
 
-def test_list_transactions():
+def test_list_transactions_without_a_period_defaults_to_all_time():
+    """A listing is already narrowed by its filters, so an absent period means all time."""
     result = parse_q("Show me HDFC credit transactions")
+    assert isinstance(result, FinancialQuery)
+    assert result.intent == Intent.TRANSACTION_LIST
+    assert result.filters.bank_code == "HDFC"
+    assert result.filters.transaction_type == "credit"
+    assert result.date_range.label == "all time"
+
+
+def test_unscoped_aggregate_without_a_period_is_still_ambiguous():
+    result = parse_q("How much did I spend?")
     assert isinstance(result, QueryRefusal)
     assert result.reason.value == "ambiguous"
 
@@ -36,10 +46,44 @@ def test_unsupported_payroll():
     assert result.reason.value == "unsupported_metric"
 
 
-def test_ambiguous_no_date():
-    result = parse_q("Show HDFC transactions")
-    # This should ask for date clarification
+def test_bank_named_aggregate_without_a_period_is_ambiguous():
+    """A bank name alone does not scope an aggregate, so the period is still required."""
+    result = parse_q("How much did I spend at HDFC bank?")
     assert isinstance(result, QueryRefusal)
+    assert result.reason.value == "ambiguous"
+
+
+def test_balance_is_scoped_by_a_named_bank():
+    result = parse_q("How much money do I have in HDFC?")
+    assert isinstance(result, FinancialQuery)
+    assert result.intent == Intent.ACCOUNT_BALANCE
+    assert result.filters.bank_code == "HDFC"
+
+
+def test_incoming_money_is_a_credit_flow_not_a_balance():
+    result = parse_q("How much money came in last month?")
+    assert isinstance(result, FinancialQuery)
+    assert result.intent == Intent.TRANSACTION_SUMMARY
+    assert result.metric == Metric.TRANSACTION_AMOUNT
+    assert result.filters.transaction_type == "credit"
+
+
+def test_merchant_name_becomes_a_description_filter():
+    result = parse_q("What did I spend at Selection Electronics?")
+    assert isinstance(result, FinancialQuery)
+    assert result.filters.description_contains == "Selection Electronics"
+    assert result.filters.transaction_type == "debit"
+    result = parse_q("Show all transactions containing Reliance.")
+    assert isinstance(result, FinancialQuery)
+    assert result.filters.description_contains == "Reliance"
+
+
+def test_transaction_listing_is_not_mistaken_for_an_account_listing():
+    result = parse_q("Show all transactions from my SBI accounts.")
+    assert isinstance(result, FinancialQuery)
+    assert result.intent == Intent.TRANSACTION_LIST
+    assert result.filters.bank_code == "SBIN"
+    assert result.filters.account_id is None
 
 
 @pytest.mark.parametrize(

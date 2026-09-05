@@ -62,6 +62,8 @@ BANK_ALIASES = {
 # Debit/credit cues
 DEBIT_CUES = r"\b(spent|spend|spending|paid|payments?|debit|debited?|debits?|outgoing|outflow|withdraw\w*|went out|shell out|shelled out)\b"
 CREDIT_CUES = r"\b(received|incoming|credits?|credited|inflow|earned|deposits?|deposited|came in|coming in|got)\b"
+# Credit cues that unambiguously describe money *flow*, so they outrank a balance reading.
+CREDIT_FLOW_CUES = r"\b(came in|coming in|received|credited|incoming|inflow|deposited)\b"
 
 # Transaction question keywords
 TXN_KEYWORDS = r"\b(transaction|transactions|count|sum|list|display|spend|spent|spending|paid|payments?|debits?|credits?|received|incoming|inflow|outgoing|outflow|deposits?|deposited|withdrew|withdrawals?|withdraw|how much|how many|amount|cash|rupees?|money|inr|₹)\b"
@@ -199,8 +201,12 @@ def understand_question(
         r"\b(balance|available across|total available|how much (money|do i have)|have in\b|which bank holds|holds the most money)\b",
         q_lower,
     ):
-        if re.search(DEBIT_CUES, q_lower) or re.search(r"\b(transaction|spend|spent|paid|debit|credit)\b", q_lower):
-            # Not a balance query, fall through
+        if (
+            re.search(DEBIT_CUES, q_lower)
+            or re.search(CREDIT_FLOW_CUES, q_lower)
+            or re.search(r"\b(transaction|spend|spent|paid|debit|credit)\b", q_lower)
+        ):
+            # Describes money movement, not a stored balance; fall through
             pass
         else:
             # Balance intent
@@ -220,16 +226,19 @@ def understand_question(
                     limit=5,
                 )
             else:
+                # A named bank scopes the balance; without it we sum every account.
                 return FinancialQuery(
                     intent=Intent.ACCOUNT_BALANCE,
                     metric=Metric.BALANCE,
                     aggregation=Aggregation.SUM,
-                    filters=QueryFilters(),
+                    filters=QueryFilters(bank_code=_extract_bank_code(q_lower)),
                     date_range=DateRange(start=ref_date, end=ref_date + timedelta(days=1), label="current"),
                 )
 
-    # Account list
-    if re.search(r"\b(my accounts|all accounts|accounts do i have|show.*accounts)\b", q_lower):
+    # Account list; "transactions from my SBI accounts" is a transaction question, not an account listing.
+    if not re.search(r"\btransactions?\b", q_lower) and re.search(
+        r"\b(my accounts|all accounts|accounts do i have|show.*accounts)\b", q_lower
+    ):
         return FinancialQuery(
             intent=Intent.ACCOUNT_LIST,
             metric=Metric.TRANSACTION_COUNT,
@@ -281,8 +290,11 @@ def _parse_transaction_query(question: str, reference_date: date) -> FinancialQu
         aggregation = Aggregation.SUM
 
     # Determine intent
+    limit = None
     if re.search(r"\b(largest|biggest|top \d+|largest \d+|highest)\b", q_lower):
+        # Superlatives ask for rows, not an aggregate.
         intent = Intent.TRANSACTION_LIST
+        aggregation = Aggregation.NONE
         group_by = []
         limit_match = re.search(r"\b(?:top|largest|biggest)\s+(\d+)\b", q_lower)
         limit = int(limit_match.group(1)) if limit_match else 10
@@ -300,15 +312,13 @@ def _parse_transaction_query(question: str, reference_date: date) -> FinancialQu
         intent = Intent.TRANSACTION_SUMMARY
         group_by = []
 
-    # Date range
+    description_contains = _extract_description(question)
+
+    # Date range. A listing or a merchant-scoped question is already narrowed, so an
+    # absent period means "all time"; an unscoped aggregate stays ambiguous.
     date_range = _extract_date_range(question, reference_date)
     if date_range is None:
-        bank_code = _extract_bank_code(q_lower)
-        if (
-            bank_code
-            and q_lower.strip()
-            == f"show me {next((alias for alias, code in BANK_ALIASES.items() if code == bank_code and alias in q_lower), '')} transactions"
-        ):
+        if intent == Intent.TRANSACTION_LIST or description_contains is not None:
             date_range = resolve_date_range(DateRangeType.ALL_TIME, reference_date)
         else:
             return mk_refusal(
@@ -342,6 +352,7 @@ def _parse_transaction_query(question: str, reference_date: date) -> FinancialQu
         transaction_type=txn_type,
         bank_code=_extract_bank_code(q_lower),
         account_id=_extract_account_id(question),
+        description_contains=description_contains,
         min_amount=min_amount,
         min_amount_operator=min_operator,
         max_amount=max_amount,
@@ -357,7 +368,7 @@ def _parse_transaction_query(question: str, reference_date: date) -> FinancialQu
             filters=filters,
             date_range=date_range,
             group_by=group_by,
-            limit=limit if "limit" in locals() else None,
+            limit=limit,
         )
         return query
     except Exception:
@@ -443,6 +454,75 @@ def _extract_date_range(question: str, reference_date: date) -> DateRange | None
     if re.search(r"\b(all time|ever)\b", q_lower):
         return resolve_date_range(DateRangeType.ALL_TIME, reference_date)
 
+    return None
+
+
+# Explicit description cues, then a capitalised merchant name after "at".
+DESCRIPTION_KEYWORD_PATTERN = re.compile(
+    r"\b(?:containing|contains|matching|mentioning|described as|with description)\s+(.+)",
+    re.IGNORECASE,
+)
+DESCRIPTION_MERCHANT_PATTERN = re.compile(r"\b[Aa]t\s+([A-Z][A-Za-z0-9&'.\-]*(?:\s+[A-Z][A-Za-z0-9&'.\-]*)*)")
+# Tokens that end a description phrase because they introduce another clause.
+DESCRIPTION_STOP_WORDS = frozenset(
+    {
+        "a",
+        "above",
+        "after",
+        "all",
+        "an",
+        "and",
+        "at",
+        "before",
+        "below",
+        "between",
+        "by",
+        "during",
+        "for",
+        "from",
+        "in",
+        "last",
+        "my",
+        "of",
+        "on",
+        "or",
+        "over",
+        "since",
+        "the",
+        "this",
+        "to",
+        "under",
+        "with",
+    }
+)
+MAX_DESCRIPTION_TOKENS = 4
+
+
+def _clean_description(raw: str) -> str | None:
+    """Trim a captured phrase down to the merchant-like tokens the ILIKE filter needs."""
+    tokens: list[str] = []
+    for token in raw.split():
+        stripped = token.strip(".,;:!?\"'()")
+        if not stripped or stripped.lower() in DESCRIPTION_STOP_WORDS:
+            break
+        tokens.append(stripped)
+        if len(tokens) >= MAX_DESCRIPTION_TOKENS:
+            break
+    value = " ".join(tokens)
+    # A bare bank name is already handled by the bank_code filter.
+    if not value or value.lower() in BANK_ALIASES:
+        return None
+    return value
+
+
+def _extract_description(question: str) -> str | None:
+    """Extract a free-text description filter; compiled to a case-insensitive ILIKE."""
+    for pattern in (DESCRIPTION_KEYWORD_PATTERN, DESCRIPTION_MERCHANT_PATTERN):
+        match = pattern.search(question)
+        if match:
+            value = _clean_description(match.group(1))
+            if value is not None:
+                return value
     return None
 
 

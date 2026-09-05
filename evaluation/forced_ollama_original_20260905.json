@@ -1,0 +1,175 @@
+[
+  {
+    "question": "What is my available balance?",
+    "expected_intent": "account_balance"
+  },
+  {
+    "question": "What is the total available balance across all accounts?",
+    "expected_intent": "account_balance"
+  },
+  {
+    "question": "Which account has the highest balance?",
+    "expected_intent": "account_balance",
+    "expected_group_by": ["account"]
+  },
+  {
+    "question": "Which bank holds the most money?",
+    "expected_intent": "bank_balance",
+    "expected_group_by": ["bank"]
+  },
+  {
+    "question": "Show me all my accounts.",
+    "expected_intent": "account_list"
+  },
+  {
+    "question": "What is the balance of my HDFC account?",
+    "expected_intent": "account_balance",
+    "expected_filters": {"bank_code": "HDFC"}
+  },
+  {
+    "question": "How much did I spend last month?",
+    "expected_intent": "transaction_summary",
+    "expected_filters": {"transaction_type": "debit"},
+    "expected_date_range": "calendar_month"
+  },
+  {
+    "question": "How much money came in last month?",
+    "expected_intent": "transaction_summary",
+    "expected_filters": {"transaction_type": "credit"}
+  },
+  {
+    "question": "How much did I spend in June?",
+    "expected_intent": "transaction_summary",
+    "expected_date_range": "calendar_month"
+  },
+  {
+    "question": "Show my largest transactions.",
+    "expected_intent": "transaction_list"
+  },
+  {
+    "question": "What were my biggest debit transactions?",
+    "expected_intent": "transaction_list",
+    "expected_filters": {"transaction_type": "debit"}
+  },
+  {
+    "question": "How many transactions happened last month?",
+    "expected_intent": "transaction_summary",
+    "expected_metric": "transaction_count"
+  },
+  {
+    "question": "Show transactions above ₹50,000.",
+    "expected_intent": "transaction_list",
+    "expected_filters": {"min_amount": 50000}
+  },
+  {
+    "question": "What did I spend at Selection Electronics?",
+    "expected_intent": "transaction_summary",
+    "expected_filters": {"description_contains": "SELECTION ELECTRONICS"}
+  },
+  {
+    "question": "Show all transactions containing Reliance.",
+    "expected_intent": "transaction_list",
+    "expected_filters": {"description_contains": "RELIANCE"}
+  },
+  {
+    "question": "Which month had the highest debit amount?",
+    "expected_intent": "monthly_trend",
+    "expected_filters": {"transaction_type": "debit"}
+  },
+  {
+    "question": "What are my top transaction descriptions by spend?",
+    "expected_intent": "top_descriptions"
+  },
+  {
+    "question": "How much money do I have in HDFC?",
+    "expected_intent": "account_balance",
+    "expected_filters": {"bank_code": "HDFC"}
+  },
+  {
+    "question": "How many accounts do I have with each bank?",
+    "expected_intent": "bank_account_count"
+  },
+  {
+    "question": "Which bank has the highest total balance?",
+    "expected_intent": "bank_balance",
+    "expected_group_by": ["bank"]
+  },
+  {
+    "question": "Show all transactions from my SBI accounts.",
+    "expected_intent": "transaction_list",
+    "expected_filters": {"bank_code": "SBIN"}
+  },
+  {
+    "question": "Find transaction reference 1715499972.",
+    "expected_intent": "reference_lookup",
+    "expected_filters": {"reference_id": "1715499972"}
+  },
+  {
+    "question": "Show transaction with reference S5314253.",
+    "expected_intent": "reference_lookup",
+    "expected_filters": {"reference_id": "S5314253"}
+  },
+  {
+    "question": "Find UTR xyz12345678abcdef.",
+    "expected_intent": "reference_lookup",
+    "expected_filters": {"utr_number": "xyz12345678abcdef"}
+  },
+  {
+    "question": "How much did I pay my employees?",
+    "expected_refusal": "unsupported"
+  },
+  {
+    "question": "What is my profit margin?",
+    "expected_refusal": "unsupported"
+  },
+  {
+    "question": "Which invoices are overdue?",
+    "expected_refusal": "unsupported"
+  },
+  {
+    "question": "what is your name",
+    "expected_refusal": "unsupported"
+  },
+  {
+    "question": "Who are you?",
+    "expected_refusal": "unsupported"
+  },
+  {
+    "question": "How much did we spend on vendor payouts?",
+    "expected_refusal": "unsupported"
+  },
+  {
+    "question": "How much did I spend in August?",
+    "expected_intent": "transaction_summary",
+    "expected_filters": {"transaction_type": "debit"},
+    "context": {
+      "last_intent": "transaction_summary",
+      "last_metric": "transaction_amount",
+      "last_filters": {"transaction_type": "debit"},
+      "last_date_range": {"type": "calendar_month", "start": "2026-08-01", "end": "2026-08-31", "label": "Aug 2026"}
+    }
+  },
+  {
+    "question": "What about July?",
+    "expected_intent": "transaction_summary",
+    "expected_filters": {"transaction_type": "debit"},
+    "expected_date_range": "calendar_month",
+    "context": {
+      "last_intent": "transaction_summary",
+      "last_metric": "transaction_amount",
+      "last_filters": {"transaction_type": "debit"},
+      "last_date_range": {"type": "calendar_month", "start": "2026-08-01", "end": "2026-08-31", "label": "Aug 2026"}
+    }
+  },
+  {
+    "question": "How does that compare with the month before?",
+    "expected_intent": "comparison",
+    "expected_filters": {"transaction_type": "debit"},
+    "context": {
+      "last_intent": "transaction_summary",
+      "last_metric": "transaction_amount",
+      "last_filters": {"transaction_type": "debit"},
+      "last_date_range": {"type": "calendar_month", "start": "2026-08-01", "end": "2026-08-31", "label": "Aug 2026"}
+    }
+  }
+]

@@ -4,7 +4,7 @@ Artha turns supported financial questions into a validated `FinancialQuery`, com
 
 ## Current status
 
-- Production `/api/chat` uses the rule parser, `ConversationContext`, and `FinancialQueryExecutor` backed by the configured MySQL database.
+- Production `/api/chat` uses the rule parser, `ConversationContext`, and `FinancialQueryExecutor` backed by the configured MySQL database. Ollama is an optional rules-miss fallback and is disabled by default. **No model selected for the current Ollama JSON-schema fallback adapter.**
 - Conversation context uses SQLite by default and supports durable follow-ups such as “What about July?” across process restarts. Only semantic context is stored; financial results, evidence, account numbers, UTRs, and chat history are never persisted. An in-memory store remains available for tests and evaluation.
 - `/api/capabilities` reports the schema and semantics discovered from the configured database.
 - SQL is generated only from allowlisted plans and parameters. Transaction evidence is masked before it leaves an engine.
@@ -16,6 +16,8 @@ Artha turns supported financial questions into a validated `FinancialQuery`, com
 ```text
 Question + ConversationContext
   -> deterministic rule parser
+     -> rules miss + ARTHA_OLLAMA_ENABLED=true
+        -> Ollama semantic fallback
   -> validated FinancialQuery
   -> allowlisted LogicalPlan
   -> MySQL / DuckDB snapshot execution
@@ -42,6 +44,10 @@ The principal settings are:
 | `ARTHA_DATABASE_URL` | `mysql://artha:artha@127.0.0.1:3306/artha` | Production database |
 | `ARTHA_DEBIT_SIGN` | `positive` | Debit amount convention |
 | `ARTHA_UTR_MODE` | `plaintext` | UTR lookup mode |
+| `ARTHA_OLLAMA_ENABLED` | `false` | Enable the optional Ollama fallback only after an explicit rules miss |
+| `ARTHA_OLLAMA_MODEL` | `qwen3.5:0.8b` | Ollama model name. No model selected for the current Ollama JSON-schema fallback adapter |
+| `ARTHA_OLLAMA_BASE_URL` | `http://127.0.0.1:11434` | Local Ollama API endpoint |
+| `ARTHA_OLLAMA_TIMEOUT` | `30.0` | Ollama request timeout in seconds |
 | `ARTHA_CONVERSATION_STORE` | `sqlite` | Conversation store (`sqlite` or `memory`) |
 | `ARTHA_SQLITE_DB_PATH` | `./backend/artha.db` | Durable local conversation database path |
 | `ARTHA_CORS_ORIGINS` | local Vite and React origins | Allowed browser origins |
@@ -227,6 +233,16 @@ uv run python evaluation/run_eval.py \
   --engine mysql \
   --mysql-url mysql://artha:artha@127.0.0.1:3306/artha \
   --include-holdout
+
+# Corrected, frozen forced-Ollama model-selection benchmark
+uv run python evaluation/benchmark_ollama.py \
+  --model qwen3.5:4b \
+  --output evaluation/results_ollama_qwen3_5_4b_corrected_20260905.json
+
+# Offline re-scoring of a saved run; reuses stored generations and never calls Ollama
+uv run python evaluation/benchmark_ollama.py \
+  --rescore evaluation/results_ollama_qwen3_5_4b_corrected_20260905.json \
+  --output evaluation/results_ollama_qwen3_5_4b_rescored_20260905.json
 ```
 
 The evaluation clock is fixed at 2026-09-05 and the fixture seed is 42. Each result records per-suite, combined-corpus, fixture, and rules hashes. Saved evidence:
@@ -236,6 +252,47 @@ The evaluation clock is fixed at 2026-09-05 and the fixture seed is 42. Each res
 - `evaluation/results_mysql_expanded_baseline_20260905.json`: untouched expanded baseline, 26/26 regression and 27/55 generalization
 - `evaluation/results_mysql_postfix_nonholdout_20260905.json`: 26/26 regression and 55/55 generalization
 - `evaluation/results_mysql_final_holdout_20260905.json`: 18/20 holdout, 99/101 combined
+- `evaluation/results_mysql_m3_phase3_20260905.json`: post-tooling deterministic rerun, 99/101 combined and 100% safety/refusal
+- `evaluation/results_ollama_qwen3_5_4b_20260905.json`: preserved original 4B run against the original corpus
+- `evaluation/results_ollama_qwen3_5_4b_corrected_20260905.json`: one corrected-contract 4B run
+- `evaluation/results_ollama_granite3_3_8b_corrected_20260905.json`: one corrected-contract Granite 8B run
+- `evaluation/results_mysql_m3_phase3_contractfix_20260905.json`: corrected-contract deterministic rerun, 99/101 combined and 100% safety/refusal
+- `evaluation/results_ollama_qwen3_5_4b_rescored_20260905.json`: execution-semantic re-score of the saved 4B run
+- `evaluation/results_ollama_granite3_3_8b_rescored_20260905.json`: execution-semantic re-score of the saved Granite 8B run
+- `evaluation/results_mysql_m3_merge_20260905.json`: deterministic rerun at merge, 100/101 combined and 100% safety/refusal
+
+### Execution-semantic benchmark scoring
+
+A model answer is scored against what the compiler would actually execute, not against literal field equality:
+
+- `description_contains` compiles to a case-insensitive `ILIKE '%value%'`, so it is compared trimmed and case-folded. `"Selection Electronics"` and `"SELECTION ELECTRONICS"` therefore score identically.
+- `min_amount_operator` and `max_amount_operator` are only rendered into SQL when their bound is present, so each is compared only when the corresponding bound is set on both sides.
+- Everything else stays an exact comparison: bank, account, reference and UTR identifiers, transaction type, date range, intent, metric, aggregation, group-by, limit, comparison spec, and refusal reason.
+
+All 24 `forced_parity` cases are asserted to be reproducible by the deterministic parser: `understand_question()` is run on each question, checked for semantic equality with the case's `expected_query`, and compiled. Closing that gap required six parser fixes, which also raised the deterministic corpus from 99/101 to 100/101 with no regressions:
+
+- a named bank now scopes an account-balance question (`"How much money do I have in HDFC?"`)
+- an inbound money-flow question is a credit summary, not a balance (`"How much money came in last month?"`)
+- superlative listings return rows instead of an aggregate (`"Show my largest transactions."`)
+- a listing or merchant-scoped question defaults to all time when no period is given, while an unscoped aggregate stays ambiguous
+- merchant and `containing` phrases become a `description_contains` filter, ignoring bare bank names
+- `"Show all transactions from my SBI accounts."` is a transaction listing, not an account listing
+
+### M3 Phase 3 model-selection result
+
+| Model/run | Overall | Forced parity | Fallback/safety | Safety refusal | Latency mean / p50 / p95 | Tokens prompt / completion / total | Refusals / malformed | Selected |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | --- |
+| `qwen3.5:4b` original | 8/33 | 6/24 | 2/9 | 0/6 | 4057.38 / 3820.18 / 5151.49 ms | 7919 / 1934 / 9853 | 13 / 13 | No |
+| `qwen3.5:4b` corrected | 8/33 | 7/24 | 1/9 | 0/6 | 3628.43 / 3630.79 / 4724.63 ms | 7929 / 1966 / 9895 | 11 / 11 | No |
+| `granite3.3:8b` corrected | 6/33 | 5/24 | 1/9 | 0/6 | 6744.31 / 6686.55 / 9691.76 ms | 8339 / 3045 / 11384 | 5 / 5 | No |
+| `qwen3.5:4b` re-scored | 8/33 | 7/24 | 1/9 | 0/6 | 3628.43 / 3630.79 / 4724.63 ms | 7929 / 1966 / 9895 | 11 / 11 | No |
+| `granite3.3:8b` re-scored | 7/33 | 6/24 | 1/9 | 0/6 | 6744.31 / 6686.55 / 9691.76 ms | 8339 / 3045 / 11384 | 5 / 5 | No |
+
+**No model selected for the current Ollama JSON-schema fallback adapter.** M3 model selection is **none**.
+
+The two re-scored rows reuse the saved generations byte-for-byte; Ollama was not invoked again, so latency and token counts are identical to their source runs and only the verdicts were recomputed. Re-scoring moved exactly one case: `parity_14` now passes for Granite, which had emitted the correct merchant filter in a different casing than the corpus. Neither re-scored run reaches the fixed gates of at least 32/33 overall and exactly 6/6 safety/refusal, and both remain at 0/6 on safety refusals.
+
+The corrected corpus has 24 compiler-executable parity questions, six exact-reason refusal questions (including capability), and three declared-context questions. The original 4B artifact, the original corpus, and both corrected-contract runs are preserved byte-for-byte and hash-pinned in tests. Prompt, schema, temperature, normalization, and model settings were unchanged; no 9B run or benchmark-driven tuning was performed. The next milestone is M4 frontend.
 
 ## Repository layout
 
@@ -252,6 +309,9 @@ evaluation/regression.json             Locked 26-case regression suite
 evaluation/generalization.json         55-case rule-development suite
 evaluation/holdout.json                Frozen 20-case final-only suite
 evaluation/run_eval.py                 Reproducible evaluation runner
+evaluation/forced_ollama.json          Corrected frozen 33-case forced-LLM corpus
+evaluation/forced_ollama_original_20260905.json  Archived original forced-LLM corpus
+evaluation/benchmark_ollama.py         Forced-Ollama model-selection runner and offline re-scorer
 ```
 
 `artha.duckdb` and the root `results.json` are local generated artifacts and are ignored by Git.

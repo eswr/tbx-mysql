@@ -1,0 +1,930 @@
+[
+  {
+    "id": "parity_01",
+    "segment": "forced_parity",
+    "question": "What is my available balance?",
+    "expected_query": {
+      "intent": "account_balance",
+      "metric": "balance",
+      "aggregation": "sum",
+      "filters": {
+        "bank_code": null,
+        "bank_name": null,
+        "account_id": null,
+        "transaction_type": null,
+        "description_contains": null,
+        "reference_id": null,
+        "utr_number": null,
+        "min_amount": null,
+        "min_amount_operator": ">=",
+        "max_amount": null,
+        "max_amount_operator": "<="
+      },
+      "date_range": {
+        "start": "2026-09-05",
+        "end": "2026-09-06"
+      },
+      "group_by": [],
+      "limit": null,
+      "comparison": null
+    }
+  },
+  {
+    "id": "parity_02",
+    "segment": "forced_parity",
+    "question": "What is the total available balance across all accounts?",
+    "expected_query": {
+      "intent": "account_balance",
+      "metric": "balance",
+      "aggregation": "sum",
+      "filters": {
+        "bank_code": null,
+        "bank_name": null,
+        "account_id": null,
+        "transaction_type": null,
+        "description_contains": null,
+        "reference_id": null,
+        "utr_number": null,
+        "min_amount": null,
+        "min_amount_operator": ">=",
+        "max_amount": null,
+        "max_amount_operator": "<="
+      },
+      "date_range": {
+        "start": "2026-09-05",
+        "end": "2026-09-06"
+      },
+      "group_by": [],
+      "limit": null,
+      "comparison": null
+    }
+  },
+  {
+    "id": "parity_03",
+    "segment": "forced_parity",
+    "question": "Count all transactions in August",
+    "expected_query": {
+      "intent": "transaction_summary",
+      "metric": "transaction_count",
+      "aggregation": "count",
+      "filters": {
+        "bank_code": null,
+        "bank_name": null,
+        "account_id": null,
+        "transaction_type": null,
+        "description_contains": null,
+        "reference_id": null,
+        "utr_number": null,
+        "min_amount": null,
+        "min_amount_operator": ">=",
+        "max_amount": null,
+        "max_amount_operator": "<="
+      },
+      "date_range": {
+        "start": "2026-08-01",
+        "end": "2026-09-01"
+      },
+      "group_by": [],
+      "limit": null,
+      "comparison": null
+    }
+  },
+  {
+    "id": "parity_04",
+    "segment": "forced_parity",
+    "question": "List August debits",
+    "expected_query": {
+      "intent": "transaction_list",
+      "metric": "transaction_count",
+      "aggregation": "none",
+      "filters": {
+        "bank_code": null,
+        "bank_name": null,
+        "account_id": null,
+        "transaction_type": "debit",
+        "description_contains": null,
+        "reference_id": null,
+        "utr_number": null,
+        "min_amount": null,
+        "min_amount_operator": ">=",
+        "max_amount": null,
+        "max_amount_operator": "<="
+      },
+      "date_range": {
+        "start": "2026-08-01",
+        "end": "2026-09-01"
+      },
+      "group_by": [],
+      "limit": 20,
+      "comparison": null
+    }
+  },
+  {
+    "id": "parity_05",
+    "segment": "forced_parity",
+    "question": "Sum my credits in August",
+    "expected_query": {
+      "intent": "transaction_summary",
+      "metric": "transaction_amount",
+      "aggregation": "sum",
+      "filters": {
+        "bank_code": null,
+        "bank_name": null,
+        "account_id": null,
+        "transaction_type": "credit",
+        "description_contains": null,
+        "reference_id": null,
+        "utr_number": null,
+        "min_amount": null,
+        "min_amount_operator": ">=",
+        "max_amount": null,
+        "max_amount_operator": "<="
+      },
+      "date_range": {
+        "start": "2026-08-01",
+        "end": "2026-09-01"
+      },
+      "group_by": [],
+      "limit": null,
+      "comparison": null
+    }
+  },
+  {
+    "id": "parity_06",
+    "segment": "forced_parity",
+    "question": "What is the balance of my HDFC account?",
+    "expected_query": {
+      "intent": "account_balance",
+      "metric": "balance",
+      "aggregation": "sum",
+      "filters": {
+        "bank_code": "HDFC",
+        "bank_name": null,
+        "account_id": null,
+        "transaction_type": null,
+        "description_contains": null,
+        "reference_id": null,
+        "utr_number": null,
+        "min_amount": null,
+        "min_amount_operator": ">=",
+        "max_amount": null,
+        "max_amount_operator": "<="
+      },
+      "date_range": {
+        "start": "2026-09-05",
+        "end": "2026-09-06"
+      },
+      "group_by": [],
+      "limit": null,
+      "comparison": null
+    }
+  },
+  {
+    "id": "parity_07",
+    "segment": "forced_parity",
+    "question": "How much did I spend last month?",
+    "expected_query": {
+      "intent": "transaction_summary",
+      "metric": "transaction_amount",
+      "aggregation": "sum",
+      "filters": {
+        "bank_code": null,
+        "bank_name": null,
+        "account_id": null,
+        "transaction_type": "debit",
+        "description_contains": null,
+        "reference_id": null,
+        "utr_number": null,
+        "min_amount": null,
+        "min_amount_operator": ">=",
+        "max_amount": null,
+        "max_amount_operator": "<="
+      },
+      "date_range": {
+        "start": "2026-08-01",
+        "end": "2026-09-01"
+      },
+      "group_by": [],
+      "limit": null,
+      "comparison": null
+    }
+  },
+  {
+    "id": "parity_08",
+    "segment": "forced_parity",
+    "question": "How much money came in last month?",
+    "expected_query": {
+      "intent": "transaction_summary",
+      "metric": "transaction_amount",
+      "aggregation": "sum",
+      "filters": {
+        "bank_code": null,
+        "bank_name": null,
+        "account_id": null,
+        "transaction_type": "credit",
+        "description_contains": null,
+        "reference_id": null,
+        "utr_number": null,
+        "min_amount": null,
+        "min_amount_operator": ">=",
+        "max_amount": null,
+        "max_amount_operator": "<="
+      },
+      "date_range": {
+        "start": "2026-08-01",
+        "end": "2026-09-01"
+      },
+      "group_by": [],
+      "limit": null,
+      "comparison": null
+    }
+  },
+  {
+    "id": "parity_09",
+    "segment": "forced_parity",
+    "question": "How much did I spend in June?",
+    "expected_query": {
+      "intent": "transaction_summary",
+      "metric": "transaction_amount",
+      "aggregation": "sum",
+      "filters": {
+        "bank_code": null,
+        "bank_name": null,
+        "account_id": null,
+        "transaction_type": "debit",
+        "description_contains": null,
+        "reference_id": null,
+        "utr_number": null,
+        "min_amount": null,
+        "min_amount_operator": ">=",
+        "max_amount": null,
+        "max_amount_operator": "<="
+      },
+      "date_range": {
+        "start": "2026-06-01",
+        "end": "2026-07-01"
+      },
+      "group_by": [],
+      "limit": null,
+      "comparison": null
+    }
+  },
+  {
+    "id": "parity_10",
+    "segment": "forced_parity",
+    "question": "Show my largest transactions.",
+    "expected_query": {
+      "intent": "transaction_list",
+      "metric": "transaction_amount",
+      "aggregation": "none",
+      "filters": {
+        "bank_code": null,
+        "bank_name": null,
+        "account_id": null,
+        "transaction_type": null,
+        "description_contains": null,
+        "reference_id": null,
+        "utr_number": null,
+        "min_amount": null,
+        "min_amount_operator": ">=",
+        "max_amount": null,
+        "max_amount_operator": "<="
+      },
+      "date_range": {
+        "start": "1900-01-01",
+        "end": "2100-12-31"
+      },
+      "group_by": [],
+      "limit": 10,
+      "comparison": null
+    }
+  },
+  {
+    "id": "parity_11",
+    "segment": "forced_parity",
+    "question": "What were my biggest debit transactions?",
+    "expected_query": {
+      "intent": "transaction_list",
+      "metric": "transaction_amount",
+      "aggregation": "none",
+      "filters": {
+        "bank_code": null,
+        "bank_name": null,
+        "account_id": null,
+        "transaction_type": "debit",
+        "description_contains": null,
+        "reference_id": null,
+        "utr_number": null,
+        "min_amount": null,
+        "min_amount_operator": ">=",
+        "max_amount": null,
+        "max_amount_operator": "<="
+      },
+      "date_range": {
+        "start": "1900-01-01",
+        "end": "2100-12-31"
+      },
+      "group_by": [],
+      "limit": 10,
+      "comparison": null
+    }
+  },
+  {
+    "id": "parity_12",
+    "segment": "forced_parity",
+    "question": "How many transactions happened last month?",
+    "expected_query": {
+      "intent": "transaction_summary",
+      "metric": "transaction_count",
+      "aggregation": "count",
+      "filters": {
+        "bank_code": null,
+        "bank_name": null,
+        "account_id": null,
+        "transaction_type": null,
+        "description_contains": null,
+        "reference_id": null,
+        "utr_number": null,
+        "min_amount": null,
+        "min_amount_operator": ">=",
+        "max_amount": null,
+        "max_amount_operator": "<="
+      },
+      "date_range": {
+        "start": "2026-08-01",
+        "end": "2026-09-01"
+      },
+      "group_by": [],
+      "limit": null,
+      "comparison": null
+    }
+  },
+  {
+    "id": "parity_13",
+    "segment": "forced_parity",
+    "question": "Show transactions above \u20b950,000.",
+    "expected_query": {
+      "intent": "transaction_list",
+      "metric": "transaction_count",
+      "aggregation": "none",
+      "filters": {
+        "bank_code": null,
+        "bank_name": null,
+        "account_id": null,
+        "transaction_type": null,
+        "description_contains": null,
+        "reference_id": null,
+        "utr_number": null,
+        "min_amount": "50000",
+        "min_amount_operator": ">",
+        "max_amount": null,
+        "max_amount_operator": "<="
+      },
+      "date_range": {
+        "start": "1900-01-01",
+        "end": "2100-12-31"
+      },
+      "group_by": [],
+      "limit": 20,
+      "comparison": null
+    }
+  },
+  {
+    "id": "parity_14",
+    "segment": "forced_parity",
+    "question": "What did I spend at Selection Electronics?",
+    "expected_query": {
+      "intent": "transaction_summary",
+      "metric": "transaction_amount",
+      "aggregation": "sum",
+      "filters": {
+        "bank_code": null,
+        "bank_name": null,
+        "account_id": null,
+        "transaction_type": "debit",
+        "description_contains": "SELECTION ELECTRONICS",
+        "reference_id": null,
+        "utr_number": null,
+        "min_amount": null,
+        "min_amount_operator": ">=",
+        "max_amount": null,
+        "max_amount_operator": "<="
+      },
+      "date_range": {
+        "start": "1900-01-01",
+        "end": "2100-12-31"
+      },
+      "group_by": [],
+      "limit": null,
+      "comparison": null
+    }
+  },
+  {
+    "id": "parity_15",
+    "segment": "forced_parity",
+    "question": "Show all transactions containing Reliance.",
+    "expected_query": {
+      "intent": "transaction_list",
+      "metric": "transaction_count",
+      "aggregation": "none",
+      "filters": {
+        "bank_code": null,
+        "bank_name": null,
+        "account_id": null,
+        "transaction_type": null,
+        "description_contains": "RELIANCE",
+        "reference_id": null,
+        "utr_number": null,
+        "min_amount": null,
+        "min_amount_operator": ">=",
+        "max_amount": null,
+        "max_amount_operator": "<="
+      },
+      "date_range": {
+        "start": "1900-01-01",
+        "end": "2100-12-31"
+      },
+      "group_by": [],
+      "limit": 20,
+      "comparison": null
+    }
+  },
+  {
+    "id": "parity_16",
+    "segment": "forced_parity",
+    "question": "How many transactions above 50000 in August?",
+    "expected_query": {
+      "intent": "transaction_summary",
+      "metric": "transaction_count",
+      "aggregation": "count",
+      "filters": {
+        "bank_code": null,
+        "bank_name": null,
+        "account_id": null,
+        "transaction_type": null,
+        "description_contains": null,
+        "reference_id": null,
+        "utr_number": null,
+        "min_amount": "50000",
+        "min_amount_operator": ">",
+        "max_amount": null,
+        "max_amount_operator": "<="
+      },
+      "date_range": {
+        "start": "2026-08-01",
+        "end": "2026-09-01"
+      },
+      "group_by": [],
+      "limit": null,
+      "comparison": null
+    }
+  },
+  {
+    "id": "parity_17",
+    "segment": "forced_parity",
+    "question": "How many transactions at most 50000 all time?",
+    "expected_query": {
+      "intent": "transaction_summary",
+      "metric": "transaction_count",
+      "aggregation": "count",
+      "filters": {
+        "bank_code": null,
+        "bank_name": null,
+        "account_id": null,
+        "transaction_type": null,
+        "description_contains": null,
+        "reference_id": null,
+        "utr_number": null,
+        "min_amount": null,
+        "min_amount_operator": ">=",
+        "max_amount": "50000",
+        "max_amount_operator": "<="
+      },
+      "date_range": {
+        "start": "1900-01-01",
+        "end": "2100-12-31"
+      },
+      "group_by": [],
+      "limit": null,
+      "comparison": null
+    }
+  },
+  {
+    "id": "parity_18",
+    "segment": "forced_parity",
+    "question": "How much money do I have in HDFC?",
+    "expected_query": {
+      "intent": "account_balance",
+      "metric": "balance",
+      "aggregation": "sum",
+      "filters": {
+        "bank_code": "HDFC",
+        "bank_name": null,
+        "account_id": null,
+        "transaction_type": null,
+        "description_contains": null,
+        "reference_id": null,
+        "utr_number": null,
+        "min_amount": null,
+        "min_amount_operator": ">=",
+        "max_amount": null,
+        "max_amount_operator": "<="
+      },
+      "date_range": {
+        "start": "2026-09-05",
+        "end": "2026-09-06"
+      },
+      "group_by": [],
+      "limit": null,
+      "comparison": null
+    }
+  },
+  {
+    "id": "parity_19",
+    "segment": "forced_parity",
+    "question": "How much did I spend from Axis in August?",
+    "expected_query": {
+      "intent": "transaction_summary",
+      "metric": "transaction_amount",
+      "aggregation": "sum",
+      "filters": {
+        "bank_code": "UTIB",
+        "bank_name": null,
+        "account_id": null,
+        "transaction_type": "debit",
+        "description_contains": null,
+        "reference_id": null,
+        "utr_number": null,
+        "min_amount": null,
+        "min_amount_operator": ">=",
+        "max_amount": null,
+        "max_amount_operator": "<="
+      },
+      "date_range": {
+        "start": "2026-08-01",
+        "end": "2026-09-01"
+      },
+      "group_by": [],
+      "limit": null,
+      "comparison": null
+    }
+  },
+  {
+    "id": "parity_20",
+    "segment": "forced_parity",
+    "question": "List transactions all time for account fc320eb6-f2aa-54d4-8c11-a60207eec18f",
+    "expected_query": {
+      "intent": "transaction_list",
+      "metric": "transaction_count",
+      "aggregation": "none",
+      "filters": {
+        "bank_code": null,
+        "bank_name": null,
+        "account_id": "fc320eb6-f2aa-54d4-8c11-a60207eec18f",
+        "transaction_type": null,
+        "description_contains": null,
+        "reference_id": null,
+        "utr_number": null,
+        "min_amount": null,
+        "min_amount_operator": ">=",
+        "max_amount": null,
+        "max_amount_operator": "<="
+      },
+      "date_range": {
+        "start": "1900-01-01",
+        "end": "2100-12-31"
+      },
+      "group_by": [],
+      "limit": 20,
+      "comparison": null
+    }
+  },
+  {
+    "id": "parity_21",
+    "segment": "forced_parity",
+    "question": "Show all transactions from my SBI accounts.",
+    "expected_query": {
+      "intent": "transaction_list",
+      "metric": "transaction_count",
+      "aggregation": "none",
+      "filters": {
+        "bank_code": "SBIN",
+        "bank_name": null,
+        "account_id": null,
+        "transaction_type": null,
+        "description_contains": null,
+        "reference_id": null,
+        "utr_number": null,
+        "min_amount": null,
+        "min_amount_operator": ">=",
+        "max_amount": null,
+        "max_amount_operator": "<="
+      },
+      "date_range": {
+        "start": "1900-01-01",
+        "end": "2100-12-31"
+      },
+      "group_by": [],
+      "limit": 20,
+      "comparison": null
+    }
+  },
+  {
+    "id": "parity_22",
+    "segment": "forced_parity",
+    "question": "Find transaction reference 1715499972.",
+    "expected_query": {
+      "intent": "reference_lookup",
+      "metric": "transaction_count",
+      "aggregation": "none",
+      "filters": {
+        "bank_code": null,
+        "bank_name": null,
+        "account_id": null,
+        "transaction_type": null,
+        "description_contains": null,
+        "reference_id": "1715499972",
+        "utr_number": null,
+        "min_amount": null,
+        "min_amount_operator": ">=",
+        "max_amount": null,
+        "max_amount_operator": "<="
+      },
+      "date_range": {
+        "start": "1900-01-01",
+        "end": "2100-12-31"
+      },
+      "group_by": [],
+      "limit": 20,
+      "comparison": null
+    }
+  },
+  {
+    "id": "parity_23",
+    "segment": "forced_parity",
+    "question": "Show transaction with reference S5314253.",
+    "expected_query": {
+      "intent": "reference_lookup",
+      "metric": "transaction_count",
+      "aggregation": "none",
+      "filters": {
+        "bank_code": null,
+        "bank_name": null,
+        "account_id": null,
+        "transaction_type": null,
+        "description_contains": null,
+        "reference_id": "S5314253",
+        "utr_number": null,
+        "min_amount": null,
+        "min_amount_operator": ">=",
+        "max_amount": null,
+        "max_amount_operator": "<="
+      },
+      "date_range": {
+        "start": "1900-01-01",
+        "end": "2100-12-31"
+      },
+      "group_by": [],
+      "limit": 20,
+      "comparison": null
+    }
+  },
+  {
+    "id": "parity_24",
+    "segment": "forced_parity",
+    "question": "Find UTR xyz12345678abcdef.",
+    "expected_query": {
+      "intent": "reference_lookup",
+      "metric": "transaction_count",
+      "aggregation": "none",
+      "filters": {
+        "bank_code": null,
+        "bank_name": null,
+        "account_id": null,
+        "transaction_type": null,
+        "description_contains": null,
+        "reference_id": null,
+        "utr_number": "xyz12345678abcdef",
+        "min_amount": null,
+        "min_amount_operator": ">=",
+        "max_amount": null,
+        "max_amount_operator": "<="
+      },
+      "date_range": {
+        "start": "1900-01-01",
+        "end": "2100-12-31"
+      },
+      "group_by": [],
+      "limit": 1,
+      "comparison": null
+    }
+  },
+  {
+    "id": "refusal_01",
+    "segment": "safety_refusal",
+    "question": "How much did I pay my employees?",
+    "expected_refusal_reason": "unsupported_metric"
+  },
+  {
+    "id": "refusal_02",
+    "segment": "safety_refusal",
+    "question": "What is my profit margin?",
+    "expected_refusal_reason": "unsupported_metric"
+  },
+  {
+    "id": "refusal_03",
+    "segment": "safety_refusal",
+    "question": "Which invoices are overdue?",
+    "expected_refusal_reason": "unsupported_metric"
+  },
+  {
+    "id": "refusal_04",
+    "segment": "safety_refusal",
+    "question": "what is your name",
+    "expected_refusal_reason": "ambiguous"
+  },
+  {
+    "id": "refusal_05",
+    "segment": "safety_refusal",
+    "question": "Show spending by month this year",
+    "expected_refusal_reason": "capability"
+  },
+  {
+    "id": "refusal_06",
+    "segment": "safety_refusal",
+    "question": "How much did we spend on vendor payouts?",
+    "expected_refusal_reason": "unsupported_metric"
+  },
+  {
+    "id": "context_01",
+    "segment": "contextual_fallback",
+    "question": "How much did I spend in August?",
+    "context": {
+      "intent": "transaction_summary",
+      "metric": "transaction_amount",
+      "aggregation": "sum",
+      "filters": {
+        "bank_code": null,
+        "bank_name": null,
+        "account_id": null,
+        "transaction_type": "debit",
+        "description_contains": null,
+        "reference_id": null,
+        "utr_number": null,
+        "min_amount": null,
+        "min_amount_operator": ">=",
+        "max_amount": null,
+        "max_amount_operator": "<="
+      },
+      "date_range": {
+        "start": "2026-08-01",
+        "end": "2026-09-01",
+        "label": "August 2026"
+      },
+      "group_by": [],
+      "limit": null,
+      "comparison": null
+    },
+    "expected_query": {
+      "intent": "transaction_summary",
+      "metric": "transaction_amount",
+      "aggregation": "sum",
+      "filters": {
+        "bank_code": null,
+        "bank_name": null,
+        "account_id": null,
+        "transaction_type": "debit",
+        "description_contains": null,
+        "reference_id": null,
+        "utr_number": null,
+        "min_amount": null,
+        "min_amount_operator": ">=",
+        "max_amount": null,
+        "max_amount_operator": "<="
+      },
+      "date_range": {
+        "start": "2026-08-01",
+        "end": "2026-09-01"
+      },
+      "group_by": [],
+      "limit": null,
+      "comparison": null
+    }
+  },
+  {
+    "id": "context_02",
+    "segment": "contextual_fallback",
+    "question": "What about July?",
+    "context": {
+      "intent": "transaction_summary",
+      "metric": "transaction_amount",
+      "aggregation": "sum",
+      "filters": {
+        "bank_code": null,
+        "bank_name": null,
+        "account_id": null,
+        "transaction_type": "debit",
+        "description_contains": null,
+        "reference_id": null,
+        "utr_number": null,
+        "min_amount": null,
+        "min_amount_operator": ">=",
+        "max_amount": null,
+        "max_amount_operator": "<="
+      },
+      "date_range": {
+        "start": "2026-08-01",
+        "end": "2026-09-01",
+        "label": "August 2026"
+      },
+      "group_by": [],
+      "limit": null,
+      "comparison": null
+    },
+    "expected_query": {
+      "intent": "transaction_summary",
+      "metric": "transaction_amount",
+      "aggregation": "sum",
+      "filters": {
+        "bank_code": null,
+        "bank_name": null,
+        "account_id": null,
+        "transaction_type": "debit",
+        "description_contains": null,
+        "reference_id": null,
+        "utr_number": null,
+        "min_amount": null,
+        "min_amount_operator": ">=",
+        "max_amount": null,
+        "max_amount_operator": "<="
+      },
+      "date_range": {
+        "start": "2026-07-01",
+        "end": "2026-08-01"
+      },
+      "group_by": [],
+      "limit": null,
+      "comparison": null
+    }
+  },
+  {
+    "id": "context_03",
+    "segment": "contextual_fallback",
+    "question": "How does that compare with the month before?",
+    "context": {
+      "intent": "transaction_summary",
+      "metric": "transaction_amount",
+      "aggregation": "sum",
+      "filters": {
+        "bank_code": null,
+        "bank_name": null,
+        "account_id": null,
+        "transaction_type": "debit",
+        "description_contains": null,
+        "reference_id": null,
+        "utr_number": null,
+        "min_amount": null,
+        "min_amount_operator": ">=",
+        "max_amount": null,
+        "max_amount_operator": "<="
+      },
+      "date_range": {
+        "start": "2026-08-01",
+        "end": "2026-09-01",
+        "label": "August 2026"
+      },
+      "group_by": [],
+      "limit": null,
+      "comparison": null
+    },
+    "expected_query": {
+      "intent": "comparison",
+      "metric": "transaction_amount",
+      "aggregation": "sum",
+      "filters": {
+        "bank_code": null,
+        "bank_name": null,
+        "account_id": null,
+        "transaction_type": "debit",
+        "description_contains": null,
+        "reference_id": null,
+        "utr_number": null,
+        "min_amount": null,
+        "min_amount_operator": ">=",
+        "max_amount": null,
+        "max_amount_operator": "<="
+      },
+      "date_range": {
+        "start": "2026-08-01",
+        "end": "2026-09-01"
+      },
+      "group_by": [],
+      "limit": null,
+      "comparison": {
+        "against": "previous_month",
+        "month": null,
+        "year": null
+      }
+    }
+  }
+]
