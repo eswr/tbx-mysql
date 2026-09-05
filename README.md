@@ -46,6 +46,90 @@ The principal settings are:
 | `ARTHA_SQLITE_DB_PATH` | `./backend/artha.db` | Durable local conversation database path |
 | `ARTHA_CORS_ORIGINS` | local Vite and React origins | Allowed browser origins |
 
+## Using the sample database for realistic testing
+
+Artha provides two databases:
+
+1. **`artha` (default)** — The frozen 101-case deterministic benchmark database. Used for reproducible evaluation, regression testing, and capability discovery. Do not modify this database.
+
+2. **`artha_sample`** — A realistic 10-row sample database with 10 banks, 10 accounts, and 10 transactions. Useful for manual integration testing, query design exploration, and capability-gap discovery before development.
+
+### Setup `artha_sample`
+
+```bash
+# Create and load the sample database (one-time setup)
+bash backend/scripts/setup_sample_db.sh
+
+# Verify the load (optional)
+uv run python backend/scripts/verify_sample_db.py
+```
+
+### Switch to `artha_sample` in `.env`
+
+Replace the default configuration:
+
+```env
+# Before (frozen benchmark database)
+ARTHA_DATABASE_URL=mysql://artha:artha@127.0.0.1:3306/artha
+ARTHA_DEBIT_SIGN=positive
+ARTHA_UTR_MODE=plaintext
+
+# After (realistic sample database)
+ARTHA_DATABASE_URL=mysql://artha:artha@127.0.0.1:3306/artha_sample
+ARTHA_DEBIT_SIGN=positive
+ARTHA_UTR_MODE=opaque
+```
+
+**Why `ARTHA_UTR_MODE=opaque` for the sample?**
+The sample UTR values are ciphertext-style (e.g., `jhI5nAdyb1qOEjmcB3JvWjC6tTO+ZPVqBFPm/GiErC4TRBWRQ5ylPG3p`), not plaintext searchable. The `opaque` mode tells the engine that UTR lookups are not supported. Transaction reference IDs (`transaction_reference_id`) remain plaintext and searchable.
+
+### Verify the sample database
+
+After switching `.env`, restart FastAPI and check:
+
+```bash
+# Health check
+curl -s http://localhost:8000/api/health | jq
+
+# Should return: { "status": "healthy" }
+
+# Capabilities check
+curl -s http://localhost:8000/api/capabilities | jq
+
+# Should report 10 banks, 10 accounts, 10 transactions (vs. 101 for artha)
+```
+
+### Run sample questions for capability discovery
+
+Use `/api/chat` to run realistic manual test queries:
+
+```bash
+curl -s -X POST http://localhost:8000/api/chat \
+  -H "Content-Type: application/json" \
+  -d '{"question": "What is the total debit amount?"}' | jq
+```
+
+Sample questions to try (and note which are currently supported or refused):
+- "How much did I spend in June 2026?"
+- "What is the total credit amount?"
+- "Show me all HDFC transactions."
+- "Which account has the highest balance?"
+- "What is the total money in and out?" (net cash movement — may not be supported)
+- "Which bank has the most accounts?" (GROUP BY bank — may not be supported)
+
+Failures and refusals are expected—use them to guide the next feature implementation. **Do not modify `rules.py` based on sample question results; this database is for observation only.**
+
+### Switch back to the benchmark database
+
+```env
+# Restore the default frozen database
+ARTHA_DATABASE_URL=mysql://artha:artha@127.0.0.1:3306/artha
+ARTHA_DEBIT_SIGN=positive
+ARTHA_UTR_MODE=plaintext
+```
+
+Then restart FastAPI.
+
 ## API
 
 ### `POST /api/chat`
