@@ -9,7 +9,17 @@ export interface Turn {
   error: string | null;
 }
 
-export function Conversation({ turns, pending }: { turns: Turn[]; pending: boolean }) {
+export function Conversation({
+  turns,
+  pending,
+  disabled,
+  onSuggestion,
+}: {
+  turns: Turn[];
+  pending: boolean;
+  disabled: boolean;
+  onSuggestion: (question: string) => void;
+}) {
   const anchor = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -17,14 +27,14 @@ export function Conversation({ turns, pending }: { turns: Turn[]; pending: boole
   }, [turns, pending]);
 
   if (turns.length === 0) {
-    return <EmptyState />;
+    return <EmptyState onSelect={onSuggestion} disabled={pending || disabled} />;
   }
 
   return (
     <div className="space-y-6">
       {turns.map((turn) => (
-        <section key={turn.id} className="space-y-2">
-          <p className="ml-auto w-fit max-w-[85%] rounded-xl rounded-br-sm bg-slate-700/70 px-4 py-2 text-slate-100">
+        <section key={turn.id} className="space-y-3">
+          <p className="ml-auto w-fit max-w-[85%] rounded-2xl rounded-br-sm bg-accent px-4 py-2 font-medium text-accent-ink">
             {turn.question}
           </p>
           {turn.response && <AnswerCard response={turn.response} />}
@@ -51,27 +61,33 @@ function Thinking() {
 }
 
 const EXAMPLES = [
-  "How much did I spend in August 2026?",
+  "What is my total available balance?",
+  "How much did I spend last month?",
+  "How many accounts per bank?",
   "Show my largest transactions.",
-  "What did I spend at Selection Electronics?",
-  "What is my available balance?",
 ];
 
-function EmptyState() {
+function EmptyState({ onSelect, disabled }: { onSelect: (question: string) => void; disabled: boolean }) {
   return (
-    <div className="rounded-xl border border-dashed border-slate-700 p-8 text-center">
-      <h2 className="text-lg font-medium text-slate-200">Ask a grounded question</h2>
-      <p className="mx-auto mt-2 max-w-md text-sm text-slate-400">
-        Every answer is computed from the database by an allowlisted query plan. Artha shows how it read your
-        question and the records behind the number, and refuses when it cannot answer.
+    <div className="rounded-xl border border-hairline bg-surface p-6">
+      <h2 className="text-lg font-medium text-slate-100">Ask about your finances</h2>
+      <p className="mt-2 max-w-2xl text-sm text-slate-400">
+        Balances, spend, inflow, banks, transaction search — every answer computed directly from the database
+        and grounded in evidence.
       </p>
-      <ul className="mt-4 space-y-1 text-sm text-slate-500">
+      <div className="mt-4 flex flex-wrap gap-2">
         {EXAMPLES.map((example) => (
-          <li key={example} className="font-mono">
+          <button
+            key={example}
+            type="button"
+            disabled={disabled}
+            onClick={() => onSelect(example)}
+            className="rounded-full border border-hairline-strong bg-surface-raised px-4 py-2 text-sm text-slate-200 transition hover:border-accent-muted hover:text-white disabled:cursor-not-allowed disabled:opacity-40"
+          >
             {example}
-          </li>
+          </button>
         ))}
-      </ul>
+      </div>
     </div>
   );
 }

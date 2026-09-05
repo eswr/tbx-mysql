@@ -1,10 +1,36 @@
 /**
  * Mirrors the backend `/api/chat` contract in `backend/app/main.py` and
  * `backend/app/schemas/`. Decimals are serialised by Pydantic as strings, so
- * every monetary field is a string here and is never parsed into a float.
+ * every monetary field is a string here and is never converted to a JavaScript number.
  */
 
 export type TransactionType = "credit" | "debit";
+
+export interface HealthResponse {
+  status: string;
+  database: string;
+  backend: string;
+}
+
+export interface BankCapability {
+  code: string;
+  name: string;
+}
+
+export interface CapabilitiesResponse {
+  tables: string[];
+  columns: Record<string, string[]>;
+  debit_sign: string;
+  debit_sign_confidence: string;
+  date_granularity: string;
+  utr_mode: string;
+  banks: BankCapability[];
+  transaction_count: number;
+  account_count: number;
+  date_range_start: string | null;
+  date_range_end: string | null;
+  warnings: string[];
+}
 
 export type RefusalReason =
   | "unsupported_metric"
@@ -74,11 +100,19 @@ export interface EvidenceRow {
   utr_number: string | null;
 }
 
+/** One row of a grouped result. `key` is the raw group key (e.g. "HDFC"), `label` the display name. */
+export interface Breakdown {
+  key: string;
+  label: string | null;
+  value: string;
+  count: number | null;
+}
+
 export interface Evidence {
   how_calculated: HowCalculated;
   source: string;
   grounded: boolean;
-  breakdown: unknown[] | null;
+  breakdown: Breakdown[] | null;
   records: EvidenceRow[] | null;
   records_truncated: boolean;
   comparison_of: Record<string, string | null> | null;

@@ -196,3 +196,92 @@ async def test_masking_account_number(duckdb_engine):
     for row in rows:
         acc_num = row["account_number"]
         assert acc_num.startswith("XXXXX"), f"Account number not masked: {acc_num}"
+
+
+@pytest.mark.parametrize(
+    "question, expected_intent, expected_aggregate",
+    [
+        ("How many accounts per bank?", "bank_account_count", "COUNT(*) AS value"),
+        ("Which bank holds the most money?", "bank_balance", "SUM(a.available_balance) AS value"),
+    ],
+)
+def test_bank_grouped_intents_compile_to_allowlisted_plans(question, expected_intent, expected_aggregate):
+    """These intents previously raised ValueError in the compiler and surfaced as a 500."""
+    from app.query.compiler import compile_financial_query
+    from app.query.sql_render import MySQLDialect, render_sql
+    from app.schemas.financial_query import FinancialQuery
+    from app.understanding.rules import understand_question
+
+    parsed = understand_question(question)
+    assert isinstance(parsed, FinancialQuery)
+    assert parsed.intent.value == expected_intent
+
+    plans = compile_financial_query(parsed)
+    assert plans.result_plan.group_by == ["a.bank_code", "b.bank_name"]
+    assert expected_aggregate in plans.result_plan.select_columns
+
+    sql = render_sql(plans.result_plan, MySQLDialect()).sql
+    assert "GROUP BY a.bank_code, b.bank_name" in sql
+    assert "JOIN bank b ON a.bank_code = b.bank_code" in sql
+    assert "ORDER BY value DESC, a.bank_code ASC" in sql
+
+    # matched_count for a grouped result is the number of groups, not the row count.
+    count_sql = render_sql(plans.count_plan, MySQLDialect()).sql
+    assert "COUNT(DISTINCT a.bank_code) AS matched_count" in count_sql
+
+
+def test_unsupported_group_dimension_fails_closed():
+    """Month grouping has no compiled plan; the compiler must refuse rather than guess."""
+    from datetime import date, timedelta
+
+    from app.query.compiler import QueryCompilationError, compile_financial_query
+    from app.schemas.financial_query import (
+        Aggregation,
+        DateRange,
+        FinancialQuery,
+        GroupByDimension,
+        Intent,
+        Metric,
+        QueryFilters,
+    )
+
+    start = date(2026, 8, 1)
+    query = FinancialQuery(
+        intent=Intent.TRANSACTION_SUMMARY,
+        metric=Metric.TRANSACTION_AMOUNT,
+        aggregation=Aggregation.SUM,
+        filters=QueryFilters(),
+        date_range=DateRange(start=start, end=start + timedelta(days=30)),
+        group_by=[GroupByDimension.MONTH],
+    )
+
+    with pytest.raises(QueryCompilationError, match="Unsupported group_by dimension"):
+        compile_financial_query(query)
+
+
+def test_multiple_group_dimensions_fail_closed():
+    from datetime import date, timedelta
+
+    from app.query.compiler import QueryCompilationError, compile_financial_query
+    from app.schemas.financial_query import (
+        Aggregation,
+        DateRange,
+        FinancialQuery,
+        GroupByDimension,
+        Intent,
+        Metric,
+        QueryFilters,
+    )
+
+    start = date(2026, 8, 1)
+    query = FinancialQuery(
+        intent=Intent.TRANSACTION_SUMMARY,
+        metric=Metric.TRANSACTION_AMOUNT,
+        aggregation=Aggregation.SUM,
+        filters=QueryFilters(),
+        date_range=DateRange(start=start, end=start + timedelta(days=31)),
+        group_by=[GroupByDimension.BANK, GroupByDimension.TRANSACTION_TYPE],
+    )
+
+    with pytest.raises(QueryCompilationError, match="Multiple group_by dimensions"):
+        compile_financial_query(query)

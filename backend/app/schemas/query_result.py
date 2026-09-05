@@ -22,7 +22,8 @@ class HowCalculated(BaseModel):
 class Breakdown(BaseModel):
     """One row of a grouped result (e.g., spending by bank)."""
 
-    key: str  # The group key: bank_code, account_id, month label, etc.
+    key: str  # The group key: bank_code, account_id, transaction_type, etc.
+    label: str | None = None  # Human-readable name for the key: "HDFC Bank" for "HDFC"
     value: Decimal  # The aggregated metric: sum, count, avg, etc.
     count: int | None = None  # For summaries, often include count alongside sum
 

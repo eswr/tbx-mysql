@@ -216,27 +216,33 @@ cd frontend
 npm install
 cp .env.example .env      # VITE_API_BASE_URL, defaults to http://127.0.0.1:8000
 npm run dev               # http://localhost:5173
+npm test                  # Vitest + Testing Library
 npm run build             # type-check and bundle
 ```
 
 The dev server binds port 5173, which is the origin allowed by the `ARTHA_CORS_ORIGINS` default. The client:
 
 - threads `conversation_id` through every turn, so follow-ups such as “What about July?” resolve against the stored semantic context;
+- restores the conversation ID from guarded session storage and lets “New conversation” clear a restored session;
+- probes backend health and database capabilities at startup, disables chat while the database is unavailable, and offers a retry path;
 - renders the validated `FinancialQuery` that was executed, hiding an amount operator unless its bound is set, matching the compiler;
-- renders `how_calculated`, the applied filters, and the masked sample records behind each number, with an explicit notice when records are truncated;
+- renders `how_calculated`, grouped bank breakdowns, the actual execution engine, applied filters, and masked sample records behind each number, with an explicit notice when records are truncated;
 - renders a structured refusal as a refusal, with its reason, suggestions, and supported capabilities. A `no_data` refusal keeps its grounded evidence because the query did execute;
 - shows engine, per-stage latency, and the LLM call count for each turn.
 
-Monetary values arrive as Pydantic decimal strings and are formatted for display only; they are never parsed into floats for arithmetic.
+Monetary values arrive as Pydantic decimal strings and are formatted with string operations only; they are never converted to a JavaScript number at all.
 
 ## Verification
 
 ```bash
+# Complete release verification (requires the configured MySQL database)
+make all
+
 # Full suite
 uv run pytest backend/tests
 
-# Frontend type-check and bundle
-cd frontend && npm run build
+# Frontend tests, type-check, and bundle
+cd frontend && npm test && npm run build
 
 # Static types
 uvx ty check backend evaluation --error-on-warning

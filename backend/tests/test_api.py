@@ -172,3 +172,138 @@ async def test_chat_mysql_end_to_end_multi_turn(mysql_available, mysql_url, fixt
     assert followup.json()["interpretation"]["filters"]["transaction_type"] == "debit"
     assert followup.json()["evidence"]["grounded"] is True
     assert followup.json()["matched_count"] > 0
+
+
+class GroupedEngine:
+    """Returns bank-grouped rows in the shape the compiler's grouped plan selects."""
+
+    def __init__(self, rows=None, matched_count=3):
+        self.calls = []
+        self.rows = rows or [
+            {"bank_code": "HDFC", "bank_name": "HDFC Bank", "value": 258},
+            {"bank_code": "ICIC", "bank_name": "ICICI Bank", "value": 190},
+            {"bank_code": "SBIN", "bank_name": "State Bank of India", "value": 153},
+        ]
+        self.matched_count = matched_count
+
+    async def execute_snapshot(self, plans, oracle_sqls):
+        self.calls.append(plans)
+        return {
+            "plan_rows": [self.rows, [{"matched_count": self.matched_count}]],
+            "oracle_rows": [],
+            "sql": ["SELECT grouped", "SELECT count"],
+        }
+
+
+@pytest.mark.asyncio
+async def test_chat_grouped_question_returns_breakdown_evidence():
+    engine = GroupedEngine()
+    app.dependency_overrides[get_executor] = lambda: FinancialQueryExecutor(engine)
+    app.dependency_overrides[get_conversation_store] = lambda: InMemoryConversationStore()
+    try:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post("/api/chat", json={"question": "How many accounts per bank?"})
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["interpretation"]["group_by"] == ["bank"]
+    assert body["evidence"]["grounded"] is True
+
+    breakdown = body["evidence"]["breakdown"]
+    assert breakdown is not None, "grouped results must populate evidence.breakdown"
+    assert len(breakdown) == 3
+    assert breakdown[0]["key"] == "HDFC"
+    assert breakdown[0]["label"] == "HDFC Bank"
+    assert Decimal(breakdown[0]["value"]) == Decimal("258")
+    # matched_count is the number of groups for a grouped result.
+    assert body["matched_count"] == 3
+    assert body["answer"] == "Accounts by bank: HDFC Bank (258), ICICI Bank (190), State Bank of India (153)."
+    assert body["calculation"] == "COUNT(*)"
+    assert body["evidence"]["source"] == "account"
+
+
+@pytest.mark.asyncio
+async def test_chat_grouped_balance_answer_uses_total_group_count_for_remainder():
+    rows = [
+        {"bank_code": "ICIC", "bank_name": "ICICI Bank", "value": Decimal("6235647.36")},
+        {"bank_code": "SBIN", "bank_name": "State Bank of India", "value": Decimal("5878751.11")},
+        {"bank_code": "RATN", "bank_name": "RBL Bank", "value": Decimal("3323884.54")},
+        {"bank_code": "TMBL", "bank_name": "Tamilnad Mercantile Bank", "value": Decimal("2774501.95")},
+        {"bank_code": "KKBK", "bank_name": "Kotak Mahindra Bank", "value": Decimal("1312329.23")},
+    ]
+    engine = GroupedEngine(rows=rows, matched_count=7)
+    app.dependency_overrides[get_executor] = lambda: FinancialQueryExecutor(engine)
+    app.dependency_overrides[get_conversation_store] = lambda: InMemoryConversationStore()
+    try:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post("/api/chat", json={"question": "Which bank holds the most money?"})
+    finally:
+        app.dependency_overrides.clear()
+
+    body = response.json()
+    assert body["answer"] == (
+        "Balance by bank: ICICI Bank (₹6,235,647.36), State Bank of India (₹5,878,751.11), "
+        "RBL Bank (₹3,323,884.54), Tamilnad Mercantile Bank (₹2,774,501.95), and 3 more."
+    )
+    assert body["matched_count"] == 7
+    assert body["calculation"] == "SUM(available_balance)"
+    assert body["evidence"]["source"] == "account"
+
+
+@pytest.mark.asyncio
+async def test_chat_ungrouped_question_has_no_breakdown(api_client):
+    response = await api_client.post("/api/chat", json={"question": "How much did I spend in August 2026?"})
+
+    assert response.status_code == 200
+    assert response.json()["evidence"]["breakdown"] is None
+
+
+@pytest.mark.asyncio
+async def test_chat_uncompilable_query_refuses_instead_of_erroring():
+    """A compilation failure must become a structured refusal, not an unhandled 500."""
+
+    class ExplodingEngine:
+        async def execute_snapshot(self, plans, oracle_sqls):  # pragma: no cover - never reached
+            raise AssertionError("execution should not be attempted")
+
+    class RefusingExecutor(FinancialQueryExecutor):
+        async def execute(self, query, oracle_sql=None):
+            from app.query.compiler import QueryCompilationError
+
+            raise QueryCompilationError("Unsupported group_by dimension: month")
+
+    app.dependency_overrides[get_executor] = lambda: RefusingExecutor(ExplodingEngine())
+    app.dependency_overrides[get_conversation_store] = lambda: InMemoryConversationStore()
+    try:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            response = await client.post("/api/chat", json={"question": "How much did I spend in August 2026?"})
+    finally:
+        app.dependency_overrides.clear()
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["refusal"]["reason"] == "capability"
+    assert body["confidence"]["level"] == "low"
+    assert body["evidence"] is None
+
+
+@pytest.mark.asyncio
+async def test_chat_does_not_convert_runtime_value_error_to_capability_refusal():
+    class FailingExecutor(FinancialQueryExecutor):
+        async def execute(self, query, oracle_sql=None):
+            raise ValueError("database decoding failed")
+
+    app.dependency_overrides[get_executor] = lambda: FailingExecutor(GroupedEngine())
+    app.dependency_overrides[get_conversation_store] = lambda: InMemoryConversationStore()
+    try:
+        transport = httpx.ASGITransport(app=app)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as client:
+            with pytest.raises(ValueError, match="database decoding failed"):
+                await client.post("/api/chat", json={"question": "How many accounts per bank?"})
+    finally:
+        app.dependency_overrides.clear()

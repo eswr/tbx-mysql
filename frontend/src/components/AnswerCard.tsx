@@ -4,10 +4,25 @@ import { EvidencePanel } from "./EvidencePanel";
 import { InterpretationPanel } from "./InterpretationPanel";
 
 const CONFIDENCE_STYLES: Record<Confidence["level"], string> = {
-  high: "border-emerald-700/60 bg-emerald-950/50 text-emerald-300",
+  high: "border-evidence-border bg-evidence-surface text-evidence",
   medium: "border-amber-700/60 bg-amber-950/50 text-amber-300",
-  low: "border-slate-600 bg-slate-800 text-slate-300",
+  low: "border-hairline-strong bg-surface-raised text-slate-300",
 };
+
+/**
+ * "High confidence — grounded in 5,327 records". The record count is only shown
+ * when the query actually executed; a refused query has nothing to be grounded in.
+ */
+function confidenceLabel(response: ChatResponse): string {
+  const level = response.confidence.level;
+  const capitalised = level.charAt(0).toUpperCase() + level.slice(1);
+  const grounded = response.evidence?.grounded === true && response.matched_count !== null;
+  if (!grounded) return `${capitalised} confidence`;
+  const count = response.matched_count as number;
+  const grouped = Boolean(response.evidence?.breakdown?.length);
+  const unit = grouped ? "group" : "record";
+  return `${capitalised} confidence — grounded in ${count.toLocaleString("en-IN")} ${unit}${count === 1 ? "" : "s"}`;
+}
 
 /**
  * A refusal is not an answer. `no_data` still carries evidence of the executed
@@ -20,37 +35,31 @@ export function AnswerCard({ response }: { response: ChatResponse }) {
 
   return (
     <article
-      className={`rounded-xl border p-4 ${
-        isHardRefusal ? "border-slate-600 bg-slate-800/60" : "border-slate-700 bg-slate-800/40"
+      className={`w-fit max-w-full min-w-0 rounded-xl border p-4 ${
+        isHardRefusal ? "border-hairline-strong bg-surface" : "border-hairline bg-surface"
       }`}
     >
-      <header className="mb-2 flex flex-wrap items-center gap-2">
-        <span className="text-xs font-semibold tracking-wide text-slate-400 uppercase">
-          {isHardRefusal ? "Refused" : "Answer"}
-        </span>
+      <p className="text-base leading-relaxed text-slate-100">{response.answer}</p>
+
+      <div className="mt-3 flex flex-wrap items-center gap-2">
         <span
-          className={`rounded-full border px-2 py-0.5 text-xs ${CONFIDENCE_STYLES[response.confidence.level]}`}
+          className={`rounded-full border px-2.5 py-1 text-xs ${CONFIDENCE_STYLES[response.confidence.level]}`}
           title={response.confidence.basis.join(", ")}
         >
-          {response.confidence.level} confidence
+          {isHardRefusal ? "" : "✓ "}
+          {confidenceLabel(response)}
         </span>
         {refusal && (
-          <span className="rounded-full border border-slate-600 bg-slate-900 px-2 py-0.5 font-mono text-xs text-slate-300">
+          <span className="rounded-full border border-hairline-strong bg-canvas px-2.5 py-1 font-mono text-xs text-slate-300">
             {refusal.reason}
           </span>
         )}
-      </header>
-
-      <p className="text-base leading-relaxed text-slate-100">{response.answer}</p>
+      </div>
 
       {refusal && <RefusalDetail refusal={refusal} />}
 
-      {response.confidence.basis.length > 0 && (
-        <p className="mt-2 text-xs text-slate-500">Basis: {response.confidence.basis.join(" · ")}</p>
-      )}
-
       {response.interpretation && <InterpretationPanel interpretation={response.interpretation} />}
-      {response.evidence && <EvidencePanel evidence={response.evidence} />}
+      {response.evidence && <EvidencePanel evidence={response.evidence} engine={response.meta.engine} />}
 
       <MetaFooter response={response} />
     </article>
@@ -60,7 +69,7 @@ export function AnswerCard({ response }: { response: ChatResponse }) {
 function RefusalDetail({ refusal }: { refusal: Refusal }) {
   if (refusal.suggestions.length === 0 && !refusal.supported_capabilities) return null;
   return (
-    <div className="mt-3 space-y-2 rounded-lg border border-slate-700/70 bg-slate-900/50 px-4 py-3">
+    <div className="mt-3 space-y-2 rounded-lg border border-hairline bg-canvas/60 px-4 py-3">
       {refusal.suggestions.length > 0 && (
         <div>
           <h4 className="text-xs font-semibold tracking-wide text-slate-400 uppercase">Try instead</h4>

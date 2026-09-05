@@ -1,19 +1,21 @@
-const RUPEES = new Intl.NumberFormat("en-IN", {
-  style: "currency",
-  currency: "INR",
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
-
 const INTEGER = new Intl.NumberFormat("en-IN");
 
 /**
- * Format a Pydantic-serialised decimal string. The string is only handed to the
- * formatter for display; an unparseable value is shown verbatim rather than as NaN.
+ * Format a Pydantic-serialised decimal string without ever converting it to a
+ * JavaScript number. Invalid values are displayed verbatim.
  */
 export function formatAmount(value: string): string {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? RUPEES.format(parsed) : value;
+  const match = /^([+-]?)(\d+)(?:\.(\d*))?$/.exec(value);
+  if (!match) return value;
+
+  const [, sign, rawInteger, rawFraction = ""] = match;
+  const integer = rawInteger.replace(/^0+(?=\d)/, "");
+  const tail = integer.slice(-3);
+  const head = integer.slice(0, -3);
+  const groupedHead = head.replace(/\B(?=(\d{2})+(?!\d))/g, ",");
+  const groupedInteger = head ? `${groupedHead},${tail}` : tail;
+  const fraction = rawFraction.padEnd(2, "0");
+  return `${sign}₹${groupedInteger}.${fraction}`;
 }
 
 export function formatCount(value: number): string {

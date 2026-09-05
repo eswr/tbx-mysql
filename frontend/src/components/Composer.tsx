@@ -3,9 +3,10 @@ import { useState, type FormEvent, type KeyboardEvent } from "react";
 interface ComposerProps {
   onSubmit: (question: string) => void;
   disabled: boolean;
+  busy?: boolean;
 }
 
-export function Composer({ onSubmit, disabled }: ComposerProps) {
+export function Composer({ onSubmit, disabled, busy = false }: ComposerProps) {
   const [value, setValue] = useState("");
 
   function submit(event: FormEvent) {
@@ -34,15 +35,15 @@ export function Composer({ onSubmit, disabled }: ComposerProps) {
         disabled={disabled}
         onChange={(event) => setValue(event.target.value)}
         onKeyDown={handleKeyDown}
-        placeholder="How much did I spend in August 2026?"
-        className="max-h-40 min-h-[2.75rem] flex-1 resize-y rounded-lg border border-slate-700 bg-slate-900 px-3 py-2.5 text-slate-100 placeholder:text-slate-600 focus:border-slate-500 focus:ring-1 focus:ring-slate-500 focus:outline-none disabled:opacity-60"
+        placeholder="Ask about your finances…"
+        className="max-h-40 min-h-[2.75rem] flex-1 resize-y rounded-xl border border-hairline bg-surface px-4 py-2.5 text-slate-100 placeholder:text-slate-500 focus:border-accent-muted focus:ring-1 focus:ring-accent-muted focus:outline-none disabled:opacity-60"
       />
       <button
         type="submit"
         disabled={disabled || value.trim().length === 0}
-        className="h-11 rounded-lg bg-slate-200 px-5 font-medium text-slate-900 transition hover:bg-white disabled:cursor-not-allowed disabled:bg-slate-700 disabled:text-slate-500"
+        className="h-11 rounded-xl bg-accent px-6 font-medium text-accent-ink transition hover:bg-accent-soft disabled:cursor-not-allowed disabled:bg-accent-muted disabled:text-slate-400"
       >
-        {disabled ? "Asking…" : "Ask"}
+        {busy ? "Sending…" : "Send"}
       </button>
     </form>
   );

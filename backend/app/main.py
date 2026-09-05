@@ -20,16 +20,20 @@ from app.conversation import (
     InMemoryConversationStore,
     SQLiteConversationStore,
 )
+from app.query.compiler import QueryCompilationError
 from app.query.execution import FinancialQueryExecutor, GroundedResult
 from app.query.mysql_engine import MySQLQueryEngine
 from app.schemas.financial_query import (
     Aggregation,
     FinancialQuery,
+    GroupByDimension,
+    Intent,
+    Metric,
     QueryRefusal,
     QueryRefusalReason,
     refusal,
 )
-from app.schemas.query_result import Confidence, Evidence, EvidenceRow, HowCalculated
+from app.schemas.query_result import Breakdown, Confidence, Evidence, EvidenceRow, HowCalculated
 from app.understanding.rules import understand_question
 
 logging.basicConfig(level=logging.INFO)
@@ -162,7 +166,7 @@ def _engine_name(executor: FinancialQueryExecutor) -> str:
 
 
 def _operation(query: FinancialQuery) -> str:
-    if query.intent.value == "account_balance":
+    if query.intent in {Intent.ACCOUNT_BALANCE, Intent.BANK_BALANCE}:
         return "SUM(available_balance)"
     if query.aggregation == Aggregation.NONE:
         return "SELECT(transactions)"
@@ -201,14 +205,76 @@ def _evidence_rows(rows: list[dict[str, Any]]) -> list[EvidenceRow] | None:
     return records
 
 
+# Result-set column that carries the group key, per grouping dimension.
+_BREAKDOWN_KEY_COLUMNS = {
+    GroupByDimension.BANK: "bank_code",
+    GroupByDimension.ACCOUNT: "account_id",
+    GroupByDimension.TRANSACTION_TYPE: "transaction_type",
+}
+
+
+def _breakdown(query: FinancialQuery, rows: list[dict[str, Any]]) -> list[Breakdown] | None:
+    """Project grouped result rows into breakdown entries for the evidence panel."""
+    if not query.group_by or not rows or "value" not in rows[0]:
+        return None
+    key_column = _BREAKDOWN_KEY_COLUMNS.get(query.group_by[0])
+    if key_column is None or key_column not in rows[0]:
+        return None
+    entries = []
+    for row in rows:
+        value = row["value"]
+        if value is None:
+            continue
+        entries.append(
+            Breakdown(
+                key=str(row[key_column]),
+                label=str(row["bank_name"]) if row.get("bank_name") is not None else None,
+                value=Decimal(str(value)),
+            )
+        )
+    return entries or None
+
+
 def _format_value(value: Any) -> str:
     if isinstance(value, Decimal):
         return f"{value:,.2f}"
     return str(value)
 
 
+def _format_group_value(query: FinancialQuery, value: Decimal) -> str:
+    if query.aggregation == Aggregation.COUNT:
+        return f"{int(value):,}"
+    return f"₹{_format_value(value)}"
+
+
+def _grouped_answer(query: FinancialQuery, result: GroundedResult) -> str | None:
+    """
+    A grouped result has no single scalar, so `result.value` is None. Name the
+    leading groups instead of formatting that None into the sentence.
+    """
+    entries = _breakdown(query, result.rows)
+    if not entries:
+        return None
+    dimension = query.group_by[0].value.replace("_", " ")
+    if query.intent == Intent.BANK_ACCOUNT_COUNT:
+        subject = "Accounts"
+    elif query.metric == Metric.BALANCE:
+        subject = "Balance"
+    else:
+        subject = "Totals"
+    shown = entries[:4]
+    named = ", ".join(f"{entry.label or entry.key} ({_format_group_value(query, entry.value)})" for entry in shown)
+    remainder = max(0, result.matched_count - len(shown))
+    suffix = f", and {remainder} more" if remainder > 0 else ""
+    return f"{subject} by {dimension}: {named}{suffix}."
+
+
 def _answer(query: FinancialQuery, result: GroundedResult) -> str:
     period = query.date_range.label or _date_range_text(query)
+    if query.group_by:
+        grouped = _grouped_answer(query, result)
+        if grouped is not None:
+            return grouped
     if query.aggregation == Aggregation.NONE:
         return f"I found {result.matched_count} matching transaction(s) for {period}."
     if query.aggregation == Aggregation.COUNT:
@@ -245,8 +311,11 @@ def _success_response(
             records_matched=result.matched_count,
             filters_applied=_filters(query),
         ),
-        source="account" if query.intent.value == "account_balance" else "transaction",
+        source="account"
+        if query.intent in {Intent.ACCOUNT_BALANCE, Intent.BANK_BALANCE, Intent.BANK_ACCOUNT_COUNT}
+        else "transaction",
         grounded=True,
+        breakdown=_breakdown(query, result.rows),
         records=records,
         records_truncated=records is not None and result.matched_count > len(records),
         comparison_of={
@@ -345,7 +414,30 @@ async def chat(
 
     # Step 4: Execute query (existing deterministic path)
     query_started = time.perf_counter()
-    result = await executor.execute(parsed)
+    try:
+        result = await executor.execute(parsed)
+    except QueryCompilationError as exc:
+        # The compiler fails closed on anything outside the allowlist. Surface that as a
+        # structured capability refusal rather than a 500.
+        logger.warning(f"Compilation refused for {parsed.intent.value}: {exc}")
+        structured = refusal(
+            QueryRefusalReason.CAPABILITY,
+            "I understood the question but cannot compute that shape of answer yet.",
+            ["Try asking about totals, counts, balances, or transactions for a specific period"],
+        )
+        return ChatResponse(
+            answer=structured.message,
+            conversation_id=conv_id,
+            interpretation=parsed.model_dump(mode="json"),
+            confidence=Confidence(level="low", basis=["not-executed", "structured-refusal"]),
+            refusal=structured,
+            meta={
+                "engine": engine_name,
+                "llm_calls": llm_calls,
+                "understanding_ms": round(understanding_ms, 3),
+                "query_ms": round((time.perf_counter() - query_started) * 1000, 3),
+            },
+        )
     query_ms = (time.perf_counter() - query_started) * 1000
     conversation_store.put(conv_id, ConversationContext.from_query(parsed))
     return _success_response(

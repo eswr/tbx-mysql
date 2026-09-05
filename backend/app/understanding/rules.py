@@ -128,8 +128,10 @@ def understand_question(
                 suggestions=["Try asking about transaction amounts, balances, or transaction descriptions"],
             )
 
+    # Month and description grouping still have no compiled plan, so they stay refused.
+    # Bank grouping ("accounts per bank") is now compiled, so it falls through below.
     if re.search(
-        r"\b(monthly|by month|per month|group(?:ed)? by|accounts? per bank|accounts? by bank)\b|"
+        r"\b(monthly|by month|per month)\b|"
         r"\b(top transaction descriptions|descriptions by spend|top spend(?:ing)? categories)\b",
         q_lower,
     ):
@@ -257,6 +259,14 @@ def understand_question(
             filters=QueryFilters(),
             date_range=DateRange(start=ref_date, end=ref_date + timedelta(days=1)),
             group_by=[GroupByDimension.BANK],
+        )
+
+    # Keep unsupported grouping explicit instead of allowing it to fall through to
+    # an ungrouped answer or the optional model fallback.
+    if re.search(r"\bgroup(?:ed)? by\b|\bby (?:category|merchant|description)\b", q_lower):
+        return mk_refusal(
+            QueryRefusalReason.CAPABILITY,
+            "That grouping dimension is not available in the deterministic executor.",
         )
 
     # Transaction-related queries

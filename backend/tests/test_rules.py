@@ -148,6 +148,12 @@ def test_top_n_limit_and_unavailable_grouping():
     assert grouped.reason.value == "capability"
 
 
+def test_generic_unsupported_grouping_is_an_explicit_refusal():
+    grouped = parse_q("Show August spending grouped by merchant")
+    assert isinstance(grouped, QueryRefusal)
+    assert grouped.reason.value == "capability"
+
+
 def test_followup_can_replace_bank_without_losing_transaction_type():
     first = parse_q("How much did I spend at HDFC in August?")
     assert isinstance(first, FinancialQuery)

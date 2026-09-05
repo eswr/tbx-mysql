@@ -5,49 +5,78 @@ import { formatAmount, formatCount, formatDate, humanizeKey } from "../lib/forma
  * Renders the proof behind a number: how it was calculated, which filters the
  * compiler actually applied, and the masked sample rows the engine returned.
  */
-export function EvidencePanel({ evidence }: { evidence: Evidence }) {
-  const { how_calculated: how, records } = evidence;
+export function EvidencePanel({ evidence, engine }: { evidence: Evidence; engine?: string }) {
+  const { how_calculated: how, records, breakdown } = evidence;
   const filters = Object.entries(how.filters_applied);
+  const matchedLabel = breakdown && breakdown.length > 0 ? "Groups matched" : "Records matched";
 
   return (
-    <details className="group mt-3 rounded-lg border border-slate-700/70 bg-slate-900/50">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-2.5 text-sm text-slate-300 hover:text-slate-100">
-        <span className="font-medium">Evidence</span>
-        <span className="flex items-center gap-2 text-xs text-slate-400">
-          <span>
-            {formatCount(how.records_matched)} record{how.records_matched === 1 ? "" : "s"} matched
-          </span>
-          <span aria-hidden className="transition-transform group-open:rotate-90">
-            ›
-          </span>
+    <details className="group mt-3 rounded-lg border border-hairline bg-canvas/60">
+      <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-2.5 text-sm font-medium text-evidence hover:brightness-110">
+        <span aria-hidden className="inline-block transition-transform group-open:rotate-90">
+          ›
         </span>
+        <span>{evidence.grounded ? "✓ Grounded" : "Not grounded"} — view how this was calculated</span>
       </summary>
 
-      <div className="space-y-4 border-t border-slate-700/70 px-4 py-3">
-        <dl className="grid grid-cols-1 gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
-          <Term label="Operation" value={how.operation} mono />
-          <Term label="Date range" value={how.date_range} mono />
-          <Term label="Source table" value={evidence.source} mono />
-          <Term label="Grounded" value={evidence.grounded ? "yes" : "no"} />
+      <div className="space-y-4 border-t border-hairline px-4 py-3">
+        <dl className="flex flex-wrap gap-x-8 gap-y-2 text-sm">
+          <InlineTerm label="Date" value={how.date_range} />
+          <InlineTerm label={matchedLabel} value={formatCount(how.records_matched)} />
+          <InlineTerm label="Operation" value={how.operation} mono />
         </dl>
 
-        <section>
-          <h4 className="mb-1.5 text-xs font-semibold tracking-wide text-slate-400 uppercase">Filters applied</h4>
+        <p className="text-sm">
+          <span className="text-slate-500">Filters: </span>
           {filters.length === 0 ? (
-            <p className="text-sm text-slate-400">No filters beyond the date range.</p>
+            <span className="text-slate-400">none beyond the date range</span>
           ) : (
-            <ul className="flex flex-wrap gap-1.5">
-              {filters.map(([key, value]) => (
-                <li
-                  key={key}
-                  className="rounded border border-slate-700 bg-slate-800/70 px-2 py-0.5 font-mono text-xs text-slate-200"
-                >
-                  {humanizeKey(key)}: {String(value)}
-                </li>
-              ))}
-            </ul>
+            <span className="font-mono text-xs text-slate-200">
+              {filters.map(([key, value]) => `${humanizeKey(key)}=${String(value)}`).join("  ")}
+            </span>
           )}
-        </section>
+        </p>
+
+        <p className="text-sm text-slate-500">
+          Source: {engine ? engine.toUpperCase() : "Database"} — {evidence.source} table, deterministic
+          allowlisted query engine
+        </p>
+
+        {breakdown && breakdown.length > 0 && (
+          <section>
+            <h4 className="mb-1.5 text-xs font-semibold tracking-wide text-slate-400 uppercase">Breakdown</h4>
+            <div className="overflow-x-auto rounded border border-hairline">
+              <table className="w-full border-collapse text-left text-xs">
+                <thead className="bg-evidence-surface text-slate-300">
+                  <tr>
+                    <th scope="col" className="px-3 py-2 font-medium">
+                      Key
+                    </th>
+                    {breakdown.some((entry) => entry.label) && (
+                      <th scope="col" className="px-3 py-2 font-medium">
+                        Name
+                      </th>
+                    )}
+                    <th scope="col" className="px-3 py-2 text-right font-medium">
+                      Value
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-hairline">
+                  {breakdown.map((entry) => (
+                    <tr key={entry.key} className="text-slate-300">
+                      <td className="px-3 py-1.5 font-mono whitespace-nowrap">{entry.key}</td>
+                      {breakdown.some((other) => other.label) && (
+                        <td className="px-3 py-1.5">{entry.label ?? "—"}</td>
+                      )}
+                      <td className="px-3 py-1.5 text-right font-mono whitespace-nowrap">{entry.value}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
 
         {evidence.comparison_of && (
           <section>
@@ -65,9 +94,9 @@ export function EvidencePanel({ evidence }: { evidence: Evidence }) {
             <h4 className="mb-1.5 text-xs font-semibold tracking-wide text-slate-400 uppercase">
               Sample records{evidence.records_truncated ? " (truncated)" : ""}
             </h4>
-            <div className="overflow-x-auto rounded border border-slate-700">
+            <div className="overflow-x-auto rounded border border-hairline">
               <table className="w-full border-collapse text-left text-xs">
-                <thead className="bg-slate-800/80 text-slate-300">
+                <thead className="bg-evidence-surface text-slate-300">
                   <tr>
                     <th scope="col" className="px-3 py-2 font-medium">
                       Date
@@ -86,7 +115,7 @@ export function EvidencePanel({ evidence }: { evidence: Evidence }) {
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-800">
+                <tbody className="divide-y divide-hairline">
                   {records.map((record) => (
                     <tr key={record.transaction_id} className="text-slate-300">
                       <td className="px-3 py-1.5 whitespace-nowrap">{formatDate(record.transaction_date)}</td>
@@ -131,6 +160,16 @@ function Term({ label, value, mono = false }: { label: string; value: string; mo
     <div>
       <dt className="text-xs tracking-wide text-slate-500 uppercase">{label}</dt>
       <dd className={`text-slate-200 ${mono ? "font-mono text-xs" : "text-sm"}`}>{value}</dd>
+    </div>
+  );
+}
+
+/** Label and value on one line, matching the compact evidence header row. */
+function InlineTerm({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
+  return (
+    <div className="flex items-baseline gap-1.5">
+      <dt className="text-slate-500">{label}:</dt>
+      <dd className={mono ? "font-mono text-xs text-slate-100" : "text-slate-100"}>{value}</dd>
     </div>
   );
 }

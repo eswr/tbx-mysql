@@ -25,6 +25,7 @@ from app.schemas.financial_query import (
     QueryRefusalReason,
     refusal,
 )
+from app.understanding.rules import understand_question
 from evaluation.run_eval import (
     LOCKED_REGRESSION_SHA256,
     SUITE_FILES,
@@ -317,6 +318,26 @@ async def test_duckdb_mysql_financial_query_parity(duckdb_path, mysql_available,
     mysql = await FinancialQueryExecutor(MySQLQueryEngine(mysql_url)).execute(q)
     assert duck.value == mysql.value
     assert duck.matched_count == mysql.matched_count
+
+
+@pytest.mark.asyncio
+@pytest.mark.requires_mysql
+async def test_duckdb_mysql_grouped_bank_query_parity(duckdb_path, mysql_available, mysql_url, fixture_dir):
+    if not mysql_available:
+        pytest.fail()
+    from scripts.load_fixture import load_mysql
+
+    assert load_mysql(mysql_url, fixture_dir, clear=True)
+    duck_executor = FinancialQueryExecutor(DuckDBQueryEngine(duckdb_path))
+    mysql_executor = FinancialQueryExecutor(MySQLQueryEngine(mysql_url))
+
+    for question in ("How many accounts per bank?", "Which bank holds the most money?"):
+        parsed = understand_question(question)
+        assert isinstance(parsed, FinancialQuery)
+        duck = await duck_executor.execute(parsed)
+        mysql = await mysql_executor.execute(parsed)
+        assert duck.rows == mysql.rows
+        assert duck.matched_count == mysql.matched_count == 7
 
 
 @pytest.mark.asyncio

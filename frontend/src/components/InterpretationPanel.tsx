@@ -16,11 +16,11 @@ export function InterpretationPanel({ interpretation }: { interpretation: Interp
   });
 
   return (
-    <details className="mt-2 rounded-lg border border-slate-700/70 bg-slate-900/50">
+    <details className="mt-2 rounded-lg border border-hairline bg-canvas/60">
       <summary className="cursor-pointer list-none px-4 py-2.5 text-sm font-medium text-slate-300 hover:text-slate-100">
         Interpretation
       </summary>
-      <div className="space-y-3 border-t border-slate-700/70 px-4 py-3 text-sm">
+      <div className="space-y-3 border-t border-hairline px-4 py-3 text-sm">
         <div className="flex flex-wrap gap-1.5">
           <Chip label="intent" value={interpretation.intent} />
           <Chip label="metric" value={interpretation.metric} />
@@ -61,7 +61,7 @@ export function InterpretationPanel({ interpretation }: { interpretation: Interp
 
 function Chip({ label, value }: { label: string; value: string }) {
   return (
-    <span className="inline-flex items-baseline gap-1.5 rounded border border-slate-700 bg-slate-800/70 px-2 py-0.5 text-xs">
+    <span className="inline-flex items-baseline gap-1.5 rounded border border-hairline-strong bg-surface-raised px-2 py-0.5 text-xs">
       <span className="text-slate-500">{label}</span>
       <span className="font-mono text-slate-200">{value}</span>
     </span>

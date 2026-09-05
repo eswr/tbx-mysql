@@ -4,8 +4,26 @@
   --font-sans:
     ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+
+  /* Surfaces */
+  --color-canvas: #0b1220;
+  --color-surface: #111c2b;
+  --color-surface-raised: #16233472;
+  --color-hairline: #1e2d40;
+  --color-hairline-strong: #2a3b52;
+
+  /* Teal accent: user bubbles, send button, grounded affordances */
+  --color-accent: #6ed0b8;
+  --color-accent-soft: #8fdcc8;
+  --color-accent-muted: #2d5b52;
+  --color-accent-ink: #0b1220;
+
+  /* Evidence / confidence green */
+  --color-evidence: #5fd3b4;
+  --color-evidence-surface: #10261f;
+  --color-evidence-border: #1f4d3e;
 }
 
 body {
-  @apply bg-slate-950 text-slate-100 antialiased;
+  @apply bg-canvas text-slate-100 antialiased;
 }
