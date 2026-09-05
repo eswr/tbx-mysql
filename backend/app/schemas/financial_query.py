@@ -238,16 +238,11 @@ def supported_capabilities() -> dict:
         "intents": [
             "transaction_summary",
             "transaction_list",
-            "top_descriptions",
-            "monthly_trend",
             "comparison",
             "account_balance",
-            "account_list",
-            "bank_balance",
-            "bank_account_count",
             "reference_lookup",
         ],
-        "group_by": ["bank", "account", "transaction_type", "month"],
+        "group_by": [],
     }
 
 

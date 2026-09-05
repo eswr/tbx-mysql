@@ -33,10 +33,10 @@ UNSUPPORTED_DOMAINS = [
     (r"\b(profit|margin|balance sheet|p&l)\b", "profit/margin data"),
     (r"\b(invoice[s]?|overdue|receivable|payable)\b", "invoice data"),
     (
-        r"(?:\b(vendors?|suppliers?|payouts?)\b.*\b(owe|paid|pay|payment|spend)\b|\b(paid|pay|payment|spend)\b.*\b(vendors?|suppliers?)\b)",
+        r"(?:\b(vendors?|suppliers?|payouts?)\b.*\b(owe|paid|pay|payment|spend)\b|\b(owe|paid|pay|payment|spend)\b.*\b(vendors?|suppliers?)\b)",
         "vendor payables",
     ),
-    (r"\b(reconcil[ia]tion|unreconciled)\b", "reconciliation data"),
+    (r"\b(reconciliation|reconcile|reconciled|reconciling|unreconciled)\b", "reconciliation data"),
     (r"\b(escrow|mandate|beneficiar)\b", "escrow/mandate data"),
     (r"\b(customers?|kyc)\b", "customer data"),
     (r"\b(forecast|projection|predict(?:ion)?)\b", "forecast data"),
@@ -48,6 +48,7 @@ BANK_ALIASES = {
     "hdfc": "HDFC",
     "icici": "ICIC",
     "sbi": "SBIN",
+    "state bank of india": "SBIN",
     "axis": "UTIB",
     "kotak": "KKBK",
     "canara": "CNRB",
@@ -59,11 +60,11 @@ BANK_ALIASES = {
 }
 
 # Debit/credit cues
-DEBIT_CUES = r"\b(spent|spend|spending|paid|debit|debited?|debits?|outgoing|withdraw\w*)\b"
-CREDIT_CUES = r"\b(received|incoming|credits?|credited|inflow|earned|deposited|came in|coming in|got)\b"
+DEBIT_CUES = r"\b(spent|spend|spending|paid|payments?|debit|debited?|debits?|outgoing|outflow|withdraw\w*|went out|shell out|shelled out)\b"
+CREDIT_CUES = r"\b(received|incoming|credits?|credited|inflow|earned|deposits?|deposited|came in|coming in|got)\b"
 
 # Transaction question keywords
-TXN_KEYWORDS = r"\b(transaction|transactions|spend|spent|spending|paid|debit|credit|received|incoming|inflow|outgoing|withdrew|withdraw|how much|how many|amount|rupees?|money|inr|₹)\b"
+TXN_KEYWORDS = r"\b(transaction|transactions|count|sum|list|display|spend|spent|spending|paid|payments?|debits?|credits?|received|incoming|inflow|outgoing|outflow|deposits?|deposited|withdrew|withdrawals?|withdraw|how much|how many|amount|cash|rupees?|money|inr|₹)\b"
 
 # Month names
 MONTH_NAMES = {
@@ -109,13 +110,12 @@ def understand_question(
     q_lower = question.lower()
     ref_date = reference_date or today_ist()
 
-    if re.search(r"\b(drop|alter|delete|insert|update)\s+(table|from|into)\b|\bwhere\s+1\s*=\s*1\b|;", q_lower):
+    if re.search(
+        r"\b(drop|alter|delete|insert|update)\s+(table|from|into|[a-z_]+)\b|\bwhere\s+1\s*=\s*1\b|;|"
+        r"\b(ignore|disregard)\b.{0,30}\b(instructions?|rules?|prompt)\b|\breveal\b.{0,30}\b(secrets?|credentials?)\b",
+        q_lower,
+    ):
         return mk_refusal(QueryRefusalReason.INVALID_STRUCTURE, "The question contains unsafe query syntax.")
-
-    if context is not None:
-        followup = _parse_followup(question, context, ref_date)
-        if followup is not None:
-            return followup
 
     # Check unsupported domains first
     for pattern, domain in UNSUPPORTED_DOMAINS:
@@ -126,6 +126,21 @@ def understand_question(
                 suggestions=["Try asking about transaction amounts, balances, or transaction descriptions"],
             )
 
+    if re.search(
+        r"\b(monthly|by month|per month|group(?:ed)? by|accounts? per bank|accounts? by bank)\b|"
+        r"\b(top transaction descriptions|descriptions by spend|top spend(?:ing)? categories)\b",
+        q_lower,
+    ):
+        return mk_refusal(
+            QueryRefusalReason.CAPABILITY,
+            "Grouped monthly and description breakdowns are not available in the deterministic executor.",
+        )
+
+    if context is not None:
+        followup = _parse_followup(question, context, ref_date)
+        if followup is not None:
+            return followup
+
     # Identity / chitchat
     if re.search(r"^(hi+|hello|hey|yo|thanks|thank you|good (morning|afternoon|evening)|ok|okay)[\s!.?]*$", q_lower):
         return mk_refusal(
@@ -134,7 +149,7 @@ def understand_question(
         )
 
     # Reference lookup
-    if "reference" in q_lower or "ref no" in q_lower or "ref id" in q_lower or "utr" in q_lower:
+    if re.search(r"\b(reference|ref(?:erence)?\s*(?:no|number|id)|ref\s*[#:]|utr)\b", q_lower):
         if "utr" in q_lower:
             # Explicit UTR search
             match = re.search(r"utr\s*(?:is|:|#|number)?\s*([A-Za-z0-9+=/]{8,})", question, re.IGNORECASE)
@@ -156,7 +171,9 @@ def understand_question(
         else:
             # Generic reference
             match = re.search(
-                r"(?:reference|ref no|ref number|ref id)\s*(?:is|:|#)?\s*([A-Za-z0-9-]{5,64})", question, re.IGNORECASE
+                r"(?:reference|ref(?:erence)?\s*(?:no|number|id)|ref)\s*(?:is|:|#)?\s*([A-Za-z0-9-]{5,64})",
+                question,
+                re.IGNORECASE,
             )
             if not match:
                 match = re.search(r"\b(S\d{6,10}|\d{9,12})\b", question)
@@ -178,7 +195,10 @@ def understand_question(
                 )
 
     # Balance queries
-    if re.search(r"\b(balance|how much (money|do i have)|have in\b|which bank holds|holds the most money)\b", q_lower):
+    if re.search(
+        r"\b(balance|available across|total available|how much (money|do i have)|have in\b|which bank holds|holds the most money)\b",
+        q_lower,
+    ):
         if re.search(DEBIT_CUES, q_lower) or re.search(r"\b(transaction|spend|spent|paid|debit|credit)\b", q_lower):
             # Not a balance query, fall through
             pass
@@ -253,7 +273,7 @@ def _parse_transaction_query(question: str, reference_date: date) -> FinancialQu
         txn_type = "credit"
 
     # Determine metric
-    if re.search(r"\b(how many|count of|number of)\b", q_lower):
+    if re.search(r"\b(how many|count(?: of)?|number of)\b", q_lower):
         metric = Metric.TRANSACTION_COUNT
         aggregation = Aggregation.COUNT
     else:
@@ -261,18 +281,14 @@ def _parse_transaction_query(question: str, reference_date: date) -> FinancialQu
         aggregation = Aggregation.SUM
 
     # Determine intent
-    if re.search(r"\b(which month|what month|month had the highest|per month|by month)\b", q_lower):
-        intent = Intent.MONTHLY_TREND
-        group_by = [GroupByDimension.MONTH]
-    elif re.search(r"\b(largest|biggest|top \d+|highest)\b", q_lower):
+    if re.search(r"\b(largest|biggest|top \d+|largest \d+|highest)\b", q_lower):
         intent = Intent.TRANSACTION_LIST
-        limit = 10
-    elif re.search(r"\b(top transaction descriptions|descriptions by spend|top spend)\b", q_lower):
-        intent = Intent.TOP_DESCRIPTIONS
         group_by = []
+        limit_match = re.search(r"\b(?:top|largest|biggest)\s+(\d+)\b", q_lower)
+        limit = int(limit_match.group(1)) if limit_match else 10
     elif re.search(r"\btransactions?\b", q_lower) and not re.search(
         r"\b(how much|how many|count|total|spend|spent|spending)\b", q_lower
-    ):
+    ) or re.search(r"^(?:show|list|display)\b", q_lower):
         intent = Intent.TRANSACTION_LIST
         metric = Metric.TRANSACTION_COUNT
         aggregation = Aggregation.NONE
@@ -283,34 +299,31 @@ def _parse_transaction_query(question: str, reference_date: date) -> FinancialQu
         group_by = []
 
     # Date range
-    date_spec = _extract_date_range(question)
-    if date_spec is None:
+    date_range = _extract_date_range(question, reference_date)
+    if date_range is None:
         bank_code = _extract_bank_code(q_lower)
         if (
             bank_code
             and q_lower.strip()
             == f"show me {next((alias for alias, code in BANK_ALIASES.items() if code == bank_code and alias in q_lower), '')} transactions"
         ):
-            date_spec = (DateRangeType.ALL_TIME, None, None)
+            date_range = resolve_date_range(DateRangeType.ALL_TIME, reference_date)
         else:
             return mk_refusal(
                 QueryRefusalReason.AMBIGUOUS,
                 "What period would you like? (e.g., 'last month', 'August', 'last 7 days', 'this year')",
             )
-    date_range_type, month, year = date_spec
-    date_range = resolve_date_range(date_range_type, reference_date, month=month, year=year)
-
     # Amount thresholds
     min_amount = None
     min_operator = ">="
     max_amount = None
     max_operator = "<="
-    match_min = re.search(r"(?:above|over|more than)\s*[₹]?\s*([\d,]+(?:\.\d+)?)", q_lower)
+    match_min = re.search(r"(?:above|over|(?<!no )more than|exceeding)\s*[₹]?\s*([\d,]+(?:\.\d+)?)", q_lower)
     if match_min:
         min_amount = Decimal(match_min.group(1).replace(",", ""))
         min_operator = ">"
     else:
-        match_min = re.search(r"(?:at least|minimum)\s*[₹]?\s*([\d,]+(?:\.\d+)?)", q_lower)
+        match_min = re.search(r"(?:at least|minimum(?: of)?)\s*[₹]?\s*([\d,]+(?:\.\d+)?)", q_lower)
         if match_min:
             min_amount = Decimal(match_min.group(1).replace(",", ""))
 
@@ -319,7 +332,7 @@ def _parse_transaction_query(question: str, reference_date: date) -> FinancialQu
         max_amount = Decimal(match_max.group(1).replace(",", ""))
         max_operator = "<"
     else:
-        match_max = re.search(r"(?:at most|no more than|maximum)\s*[₹]?\s*([\d,]+(?:\.\d+)?)", q_lower)
+        match_max = re.search(r"(?:at most|no more than|maximum(?: of)?)\s*[₹]?\s*([\d,]+(?:\.\d+)?)", q_lower)
         if match_max:
             max_amount = Decimal(match_max.group(1).replace(",", ""))
 
@@ -349,9 +362,39 @@ def _parse_transaction_query(question: str, reference_date: date) -> FinancialQu
         return None
 
 
-def _extract_date_range(question: str) -> tuple[DateRangeType, str | None, int | None] | None:
-    """Extract a date range specification from question."""
+def _extract_date_range(question: str, reference_date: date) -> DateRange | None:
+    """Extract and resolve a date range into a canonical half-open interval."""
     q_lower = question.lower()
+
+    # Explicit ISO range; natural-language end dates are inclusive.
+    match = re.search(r"\b(?:from|between)\s+(\d{4}-\d{2}-\d{2})\s+(?:to|and)\s+(\d{4}-\d{2}-\d{2})\b", q_lower)
+    if match:
+        try:
+            start = date.fromisoformat(match.group(1))
+            inclusive_end = date.fromisoformat(match.group(2))
+            if start > inclusive_end:
+                return None
+            return DateRange(start=start, end=inclusive_end + timedelta(days=1), label=f"{start} to {inclusive_end}")
+        except ValueError:
+            return None
+
+    # A single ISO date means that calendar day.
+    match = re.search(r"\b(?:on\s+)?(\d{4}-\d{2}-\d{2})\b", q_lower)
+    if match:
+        try:
+            start = date.fromisoformat(match.group(1))
+            return DateRange(start=start, end=start + timedelta(days=1), label=str(start))
+        except ValueError:
+            return None
+
+    # Month-name day, year.
+    match = re.search(r"\b([a-z]+)\s+(\d{1,2}),?\s+(\d{4})\b", q_lower)
+    if match and match.group(1) in MONTH_NAMES:
+        try:
+            start = date(int(match.group(3)), MONTH_NAMES[match.group(1)], int(match.group(2)))
+            return DateRange(start=start, end=start + timedelta(days=1), label=str(start))
+        except ValueError:
+            return None
 
     # Explicit month + year
     match = re.search(r"\b([a-z]+)\s+(\d{4})\b", q_lower)
@@ -359,36 +402,44 @@ def _extract_date_range(question: str) -> tuple[DateRangeType, str | None, int |
         month_name = match.group(1)
         year = int(match.group(2))
         if month_name in MONTH_NAMES:
-            return DateRangeType.CALENDAR_MONTH, month_name, year
+            return resolve_date_range(DateRangeType.CALENDAR_MONTH, reference_date, month=month_name, year=year)
 
     # Bare month name
     for month_name in MONTH_NAMES:
         if re.search(rf"\b{re.escape(month_name)}\b", q_lower):
-            return DateRangeType.CALENDAR_MONTH, month_name, None
+            return resolve_date_range(DateRangeType.CALENDAR_MONTH, reference_date, month=month_name)
 
     # Explicit ranges
     if "yesterday" in q_lower:
-        return DateRangeType.YESTERDAY, None, None
+        return resolve_date_range(DateRangeType.YESTERDAY, reference_date)
     if "today" in q_lower:
-        return DateRangeType.TODAY, None, None
+        return resolve_date_range(DateRangeType.TODAY, reference_date)
     if re.search(r"\b(last week|past week|previous week)\b", q_lower):
-        return DateRangeType.LAST_WEEK, None, None
+        return resolve_date_range(DateRangeType.LAST_WEEK, reference_date)
     if re.search(r"\b(this week|current week)\b", q_lower):
-        return DateRangeType.THIS_WEEK, None, None
+        return resolve_date_range(DateRangeType.THIS_WEEK, reference_date)
     if re.search(r"\b(last month|previous month)\b", q_lower):
-        return DateRangeType.CALENDAR_MONTH, None, None
+        return resolve_date_range(DateRangeType.CALENDAR_MONTH, reference_date)
     if re.search(r"\b(this month|current month)\b", q_lower):
-        return DateRangeType.THIS_MONTH, None, None
-    if re.search(r"\b(last \d+ days?|past \d+ days?)\b", q_lower):
-        return DateRangeType.LAST_N_DAYS, None, None
+        return resolve_date_range(DateRangeType.THIS_MONTH, reference_date)
+    match = re.search(r"\b(?:last|past|previous)\s+(\d+)\s+days?\b", q_lower)
+    if match:
+        days = int(match.group(1))
+        if days < 1 or days > 3660:
+            return None
+        return DateRange(
+            start=reference_date - timedelta(days=days - 1),
+            end=reference_date + timedelta(days=1),
+            label=f"last {days} days",
+        )
     if re.search(r"\b(last \d+ months?|past \d+ months?)\b", q_lower):
-        return DateRangeType.LAST_N_MONTHS, None, None
+        return resolve_date_range(DateRangeType.LAST_N_MONTHS, reference_date)
     if re.search(r"\b(this year|ytd|year to date)\b", q_lower):
-        return DateRangeType.THIS_YEAR, None, None
+        return resolve_date_range(DateRangeType.THIS_YEAR, reference_date)
     if re.search(r"\b(last year)\b", q_lower):
-        return DateRangeType.LAST_YEAR, None, None
+        return resolve_date_range(DateRangeType.LAST_YEAR, reference_date)
     if re.search(r"\b(all time|ever)\b", q_lower):
-        return DateRangeType.ALL_TIME, None, None
+        return resolve_date_range(DateRangeType.ALL_TIME, reference_date)
 
     return None
 
@@ -406,24 +457,37 @@ def _extract_account_id(question: str) -> str | None:
 
 
 def _parse_followup(question: str, context: "ConversationContext", reference_date: date) -> FinancialQuery | None:
-    date_spec = _extract_date_range(question)
-    if date_spec is None:
+    date_range = _extract_date_range(question, reference_date)
+    if date_range is None:
         return None
-    range_type, month, year = date_spec
-    date_range = resolve_date_range(range_type, reference_date, month=month, year=year)
     comparison = None
     intent = context.intent
     if re.search(r"\bcompare\b", question, re.IGNORECASE):
         intent = Intent.COMPARISON
         comparison = ComparisonSpec(against="previous_month")
         date_range = context.date_range
+    filters = context.filters.model_copy(deep=True)
+    bank_code = _extract_bank_code(question)
+    account_id = _extract_account_id(question)
+    q_lower = question.lower()
+    transaction_type = None
+    if re.search(DEBIT_CUES, q_lower):
+        transaction_type = "debit"
+    elif re.search(CREDIT_CUES, q_lower):
+        transaction_type = "credit"
+    if bank_code is not None:
+        filters.bank_code = bank_code
+    if account_id is not None:
+        filters.account_id = account_id
+    if transaction_type is not None:
+        filters.transaction_type = transaction_type
     return FinancialQuery(
         intent=intent,
         metric=context.metric,
         aggregation=context.aggregation,
-        filters=context.filters.model_copy(deep=True),
+        filters=filters,
         date_range=date_range,
         group_by=list(context.group_by),
         comparison=comparison,
-        limit=20 if context.aggregation == Aggregation.NONE else None,
+        limit=context.limit if context.aggregation == Aggregation.NONE else None,
     )

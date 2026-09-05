@@ -170,6 +170,10 @@ def load_duckdb(db_path: str, csv_dir: str):
     try:
         # Create tables
         logger.info("Creating tables...")
+        # Drop in dependency order so repeated deterministic loads cannot reuse stale data.
+        conn.execute("DROP TABLE IF EXISTS transaction")
+        conn.execute("DROP TABLE IF EXISTS account")
+        conn.execute("DROP TABLE IF EXISTS bank")
         conn.execute("""
             CREATE OR REPLACE TABLE bank (
                 bank_code VARCHAR PRIMARY KEY,

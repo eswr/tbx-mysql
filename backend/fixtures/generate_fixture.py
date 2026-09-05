@@ -151,6 +151,9 @@ def generate_fixture(
             elif j == n_transactions_per_account - 2 and account_idx == 0:
                 # Boundary case: 50,000.01 in first account
                 amount = Decimal("50000.01")
+            elif j == n_transactions_per_account - 5 and account_idx == 0:
+                # Boundary case: 49,999.99 in first account
+                amount = Decimal("49999.99")
             elif rng.random() < 0.05:
                 # Small amounts
                 amount = Decimal(str(rng.randint(100, 10000) / 100))

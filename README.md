@@ -8,7 +8,7 @@ Artha turns supported financial questions into a validated `FinancialQuery`, com
 - Conversation context uses SQLite by default and supports durable follow-ups such as “What about July?” across process restarts. Only semantic context is stored; financial results, evidence, account numbers, UTRs, and chat history are never persisted. An in-memory store remains available for tests and evaluation.
 - `/api/capabilities` reports the schema and semantics discovered from the configured database.
 - SQL is generated only from allowlisted plans and parameters. Transaction evidence is masked before it leaves an engine.
-- The deterministic benchmark contains 26 cases. The saved MySQL baseline is 11/26 before the current rules and 26/26 with the current rules.
+- The deterministic benchmark contains 101 cases: a locked 26-case regression suite, 55 generalization cases, and a frozen 20-case holdout.
 - The repository is API-only; `frontend/` is currently empty.
 
 ## Architecture
@@ -137,12 +137,21 @@ uv run pytest backend/tests/test_evaluation.py -m requires_mysql
 uv run python evaluation/run_eval.py \
   --engine mysql \
   --mysql-url mysql://artha:artha@127.0.0.1:3306/artha
+
+# Final-only holdout run (explicit opt-in)
+uv run python evaluation/run_eval.py \
+  --engine mysql \
+  --mysql-url mysql://artha:artha@127.0.0.1:3306/artha \
+  --include-holdout
 ```
 
-The evaluation clock is fixed at 2026-09-05 and the fixture seed is 42. Each result records hashes of `cases.json` and `rules.py`. Saved evidence:
+The evaluation clock is fixed at 2026-09-05 and the fixture seed is 42. Each result records per-suite, combined-corpus, fixture, and rules hashes. Saved evidence:
 
 - `evaluation/results_mysql_prerules_20260905.json`: 11/26 (42.3%)
 - `evaluation/results_mysql_postrules_20260905.json`: 26/26 (100%)
+- `evaluation/results_mysql_expanded_baseline_20260905.json`: untouched expanded baseline, 26/26 regression and 27/55 generalization
+- `evaluation/results_mysql_postfix_nonholdout_20260905.json`: 26/26 regression and 55/55 generalization
+- `evaluation/results_mysql_final_holdout_20260905.json`: 18/20 holdout, 99/101 combined
 
 ## Repository layout
 
@@ -155,7 +164,9 @@ backend/app/query/{mysql,duckdb}_engine.py
 backend/app/understanding/rules.py     Deterministic parser and follow-ups
 backend/tests/test_api.py              API contract and multi-turn coverage
 backend/tests/test_evaluation.py       Numeric, parity, and snapshot coverage
-evaluation/cases.json                  26-case benchmark
+evaluation/regression.json             Locked 26-case regression suite
+evaluation/generalization.json         55-case rule-development suite
+evaluation/holdout.json                Frozen 20-case final-only suite
 evaluation/run_eval.py                 Reproducible evaluation runner
 ```
 

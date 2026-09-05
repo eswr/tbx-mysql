@@ -16,6 +16,7 @@ class ConversationContext(BaseModel):
     filters: QueryFilters
     date_range: DateRange
     group_by: list[GroupByDimension]
+    limit: int | None = None
     comparison: ComparisonSpec | None = None
     result_reference: str | None = None
 
