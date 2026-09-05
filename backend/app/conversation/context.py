@@ -1,4 +1,6 @@
-"""Small semantic conversation context; financial values are never persisted."""
+"""Small semantic conversation context."""
+
+from typing import Protocol
 
 from pydantic import BaseModel
 
@@ -20,6 +22,14 @@ class ConversationContext(BaseModel):
     @classmethod
     def from_query(cls, query: FinancialQuery) -> "ConversationContext":
         return cls(**query.model_dump(), result_reference=None)
+
+
+class ConversationStore(Protocol):
+    """Storage boundary for semantic conversation state."""
+
+    def get(self, conversation_id: str) -> ConversationContext | None: ...
+
+    def put(self, conversation_id: str, context: ConversationContext) -> None: ...
 
 
 class InMemoryConversationStore:

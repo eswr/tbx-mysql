@@ -13,8 +13,13 @@ from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
-from app.config import get_settings
-from app.conversation import ConversationContext, InMemoryConversationStore
+from app.config import ConversationStoreType, get_settings
+from app.conversation import (
+    ConversationContext,
+    ConversationStore,
+    InMemoryConversationStore,
+    SQLiteConversationStore,
+)
 from app.query.execution import FinancialQueryExecutor, GroundedResult
 from app.query.mysql_engine import MySQLQueryEngine
 from app.schemas.financial_query import (
@@ -36,6 +41,9 @@ settings = get_settings()
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     """Validate database connectivity without preventing degraded startup."""
+    conversation_store = get_conversation_store()
+    if isinstance(conversation_store, SQLiteConversationStore):
+        conversation_store.initialize()
     if not await get_engine().ping():
         logger.warning("Failed to connect to database on startup")
     yield
@@ -55,7 +63,8 @@ app.add_middleware(
 # Global engine (lazy-loaded)
 _engine: MySQLQueryEngine | None = None
 _executor: FinancialQueryExecutor | None = None
-_conversation_store = InMemoryConversationStore()
+_conversation_store: ConversationStore | None = None
+_conversation_store_config: tuple[ConversationStoreType, str | None] | None = None
 
 
 def get_engine() -> MySQLQueryEngine:
@@ -74,7 +83,23 @@ def get_executor() -> FinancialQueryExecutor:
     return _executor
 
 
-def get_conversation_store() -> InMemoryConversationStore:
+def get_conversation_store() -> ConversationStore:
+    """Get the configured conversation store, replacing it if configuration changes."""
+    global _conversation_store, _conversation_store_config
+    current_settings = get_settings()
+    db_path = (
+        current_settings.ARTHA_SQLITE_DB_PATH
+        if current_settings.ARTHA_CONVERSATION_STORE == ConversationStoreType.SQLITE
+        else None
+    )
+    config = (current_settings.ARTHA_CONVERSATION_STORE, db_path)
+    if _conversation_store is None or _conversation_store_config != config:
+        if current_settings.ARTHA_CONVERSATION_STORE == ConversationStoreType.MEMORY:
+            _conversation_store = InMemoryConversationStore()
+        else:
+            assert db_path is not None
+            _conversation_store = SQLiteConversationStore(db_path)
+        _conversation_store_config = config
     return _conversation_store
 
 
@@ -251,7 +276,7 @@ def _success_response(
 async def chat(
     req: ChatRequest,
     executor: FinancialQueryExecutor = Depends(get_executor),
-    conversation_store: InMemoryConversationStore = Depends(get_conversation_store),
+    conversation_store: ConversationStore = Depends(get_conversation_store),
 ):
     """Interpret, execute, and return a database-grounded financial answer."""
     conv_id = req.conversation_id or str(uuid.uuid4())

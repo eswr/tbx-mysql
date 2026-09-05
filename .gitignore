@@ -4,3 +4,6 @@ __pycache__/
 *.py[cod]
 artha.duckdb
 /results.json
+backend/artha.db
+*.db-wal
+*.db-shm

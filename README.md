@@ -5,7 +5,7 @@ Artha turns supported financial questions into a validated `FinancialQuery`, com
 ## Current status
 
 - Production `/api/chat` uses the rule parser, `ConversationContext`, and `FinancialQueryExecutor` backed by the configured MySQL database.
-- Conversation context is kept in memory and supports follow-ups such as “What about July?”. Context is intentionally semantic; result values are not stored. It resets when the process restarts.
+- Conversation context uses SQLite by default and supports durable follow-ups such as “What about July?” across process restarts. Only semantic context is stored; financial results, evidence, account numbers, UTRs, and chat history are never persisted. An in-memory store remains available for tests and evaluation.
 - `/api/capabilities` reports the schema and semantics discovered from the configured database.
 - SQL is generated only from allowlisted plans and parameters. Transaction evidence is masked before it leaves an engine.
 - The deterministic benchmark contains 26 cases. The saved MySQL baseline is 11/26 before the current rules and 26/26 with the current rules.
@@ -42,6 +42,8 @@ The principal settings are:
 | `ARTHA_DATABASE_URL` | `mysql://artha:artha@127.0.0.1:3306/artha` | Production database |
 | `ARTHA_DEBIT_SIGN` | `positive` | Debit amount convention |
 | `ARTHA_UTR_MODE` | `plaintext` | UTR lookup mode |
+| `ARTHA_CONVERSATION_STORE` | `sqlite` | Conversation store (`sqlite` or `memory`) |
+| `ARTHA_SQLITE_DB_PATH` | `./backend/artha.db` | Durable local conversation database path |
 | `ARTHA_CORS_ORIGINS` | local Vite and React origins | Allowed browser origins |
 
 ## API
@@ -146,7 +148,7 @@ The evaluation clock is fixed at 2026-09-05 and the fixture seed is 42. Each res
 
 ```text
 backend/app/main.py                    FastAPI chat, health, capabilities
-backend/app/conversation/context.py    Semantic in-memory conversation state
+backend/app/conversation/              Semantic in-memory and durable SQLite conversation state
 backend/app/query/compiler.py          FinancialQuery -> allowlisted plans
 backend/app/query/execution.py         Snapshot-backed grounded executor
 backend/app/query/{mysql,duckdb}_engine.py
