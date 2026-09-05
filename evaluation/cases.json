@@ -7,6 +7,8 @@
     "expected_metric": "transaction_amount",
     "expected_filters": {"transaction_type": "debit"},
     "expected_aggregation": "sum",
+    "expected_date_start": "2026-08-01",
+    "expected_date_end": "2026-09-01",
     "oracle_sql": "SELECT SUM(transaction_amount) FROM `transaction` WHERE transaction_type='debit' AND DATE(transaction_date) >= '2026-08-01' AND DATE(transaction_date) < '2026-09-01'",
     "allow_variations": ["last month"]
   },
@@ -39,9 +41,8 @@
     "id": "filter_bank",
     "category": "filters",
     "question": "How much did I spend at HDFC bank?",
-    "expected_intent": "transaction_summary",
-    "expected_filters": {"bank_code": "HDFC", "transaction_type": "debit"},
-    "oracle_sql": "SELECT SUM(t.transaction_amount) FROM `transaction` t JOIN account a ON t.account_id=a.account_id JOIN bank b ON a.bank_code=b.bank_code WHERE b.bank_code='HDFC' AND t.transaction_type='debit' AND DATE(t.transaction_date) >= '2026-08-01' AND DATE(t.transaction_date) < '2026-09-01'"
+    "expected_refusal_reason": "ambiguous",
+    "notes": "No date period specified"
   },
   {
     "id": "filter_bank_alias",
@@ -57,7 +58,16 @@
     "question": "How many transactions above 50000 in August?",
     "expected_intent": "transaction_summary",
     "expected_metric": "transaction_count",
-    "expected_filters": {"min_amount": "50000.00"},
+    "expected_filters": {"min_amount": "50000.00", "min_amount_operator": ">"},
+    "oracle_sql": "SELECT COUNT(*) FROM `transaction` WHERE transaction_amount > 50000.00 AND DATE(transaction_date) >= '2026-08-01' AND DATE(transaction_date) < '2026-09-01'"
+  },
+  {
+    "id": "filter_amount_at_least",
+    "category": "filters",
+    "question": "How many transactions at least 50000 in August?",
+    "expected_intent": "transaction_summary",
+    "expected_metric": "transaction_count",
+    "expected_filters": {"min_amount": "50000.00", "min_amount_operator": ">="},
     "oracle_sql": "SELECT COUNT(*) FROM `transaction` WHERE transaction_amount >= 50000.00 AND DATE(transaction_date) >= '2026-08-01' AND DATE(transaction_date) < '2026-09-01'"
   },
   {
@@ -99,14 +109,16 @@
     "category": "dates",
     "question": "Transactions last week?",
     "expected_intent": "transaction_list",
-    "expected_date_start": "2026-08-31",
-    "expected_date_end": "2026-09-01"
+    "expected_date_start": "2026-08-24",
+    "expected_date_end": "2026-08-31"
   },
   {
     "id": "multiturn_swap_month",
     "category": "multi_turn",
     "question": "How much did I spend last month?",
     "followup": "What about July?",
+    "oracle_sql": "SELECT SUM(transaction_amount) FROM `transaction` WHERE transaction_type='debit' AND DATE(transaction_date) >= '2026-08-01' AND DATE(transaction_date) < '2026-09-01'",
+    "followup_oracle_sql": "SELECT SUM(transaction_amount) FROM `transaction` WHERE transaction_type='debit' AND DATE(transaction_date) >= '2026-07-01' AND DATE(transaction_date) < '2026-08-01'",
     "expected_followup_date_start": "2026-07-01",
     "expected_followup_date_end": "2026-08-01",
     "notes": "Should reuse debit filter from prior query"
@@ -116,6 +128,11 @@
     "category": "multi_turn",
     "question": "How much I spent in August?",
     "followup": "Compare to July",
+    "oracle_sql": "SELECT SUM(transaction_amount) FROM `transaction` WHERE transaction_type='debit' AND DATE(transaction_date) >= '2026-08-01' AND DATE(transaction_date) < '2026-09-01'",
+    "followup_oracle_sql": [
+      "SELECT SUM(transaction_amount) FROM `transaction` WHERE transaction_type='debit' AND DATE(transaction_date) >= '2026-08-01' AND DATE(transaction_date) < '2026-09-01'",
+      "SELECT SUM(transaction_amount) FROM `transaction` WHERE transaction_type='debit' AND DATE(transaction_date) >= '2026-07-01' AND DATE(transaction_date) < '2026-08-01'"
+    ],
     "expected_followup_intent": "comparison",
     "expected_followup_comparison_against": "previous_month"
   },
@@ -187,6 +204,7 @@
     "category": "empty_data",
     "question": "Transactions in September 2026 for account XYZ",
     "expected_refusal_reason": "no_data",
+    "oracle_sql": "SELECT COUNT(*) FROM `transaction` t WHERE t.account_id='XYZ' AND DATE(t.transaction_date) >= '2026-09-01' AND DATE(t.transaction_date) < '2026-10-01'",
     "notes": "Some accounts have no Sept txns (by design in fixture)"
   },
   {

@@ -1,0 +1,453 @@
+{
+  "provider": "rules",
+  "engine": "mysql",
+  "reference_date": "2026-09-05",
+  "fixture_seed": 42,
+  "fixture_version": 1,
+  "rules_sha256": "ee00a90e6fe29e3401941f159c3749a95e91e62994a8b29013b10f12bb7eacd5",
+  "cases_sha256": "fc5c6c569892a1ca7ab497ae35fea91c825e1ad99ac70f50a85a71cf89990dff",
+  "total": 26,
+  "passed": 26,
+  "accuracy": 1.0,
+  "scores_by_category": {
+    "ambiguity": 1.0,
+    "dates": 1.0,
+    "empty_data": 1.0,
+    "exact_number": 1.0,
+    "filters": 1.0,
+    "injection": 1.0,
+    "multi_turn": 1.0,
+    "unsupported": 1.0
+  },
+  "p50_latency_ms": 4.180499992799014,
+  "p95_latency_ms": 52.946000010706484,
+  "ran_at": "2026-09-05T09:31:52.935825+00:00",
+  "cases": [
+    {
+      "case_id": "numeric_001",
+      "category": "exact_number",
+      "question": "How much did I spend in August 2026?",
+      "latency_ms": 52.946000010706484,
+      "checks": {
+        "refusal_absent": true,
+        "query_present": true,
+        "intent_match": true,
+        "metric_match": true,
+        "aggregation_match": true,
+        "filters_match": true,
+        "date_match": true,
+        "execution_success": true,
+        "numeric_match": true,
+        "answer_not_no_data": true
+      },
+      "passed": true,
+      "score": 1.0,
+      "notes": ""
+    },
+    {
+      "case_id": "numeric_002",
+      "category": "exact_number",
+      "question": "What's my total balance?",
+      "latency_ms": 5.098666006233543,
+      "checks": {
+        "refusal_absent": true,
+        "query_present": true,
+        "intent_match": true,
+        "metric_match": true,
+        "execution_success": true,
+        "numeric_match": true,
+        "answer_not_no_data": true
+      },
+      "passed": true,
+      "score": 1.0,
+      "notes": ""
+    },
+    {
+      "case_id": "numeric_003",
+      "category": "exact_number",
+      "question": "How many debit transactions in July 2026?",
+      "latency_ms": 3.583124984288588,
+      "checks": {
+        "refusal_absent": true,
+        "query_present": true,
+        "intent_match": true,
+        "metric_match": true,
+        "execution_success": true,
+        "numeric_match": true,
+        "answer_not_no_data": true
+      },
+      "passed": true,
+      "score": 1.0,
+      "notes": ""
+    },
+    {
+      "case_id": "filter_type",
+      "category": "filters",
+      "question": "Show my credit transactions from August.",
+      "latency_ms": 6.51899998774752,
+      "checks": {
+        "refusal_absent": true,
+        "query_present": true,
+        "intent_match": true,
+        "filters_match": true,
+        "execution_success": true,
+        "numeric_match": true,
+        "answer_not_no_data": true
+      },
+      "passed": true,
+      "score": 1.0,
+      "notes": ""
+    },
+    {
+      "case_id": "filter_bank",
+      "category": "filters",
+      "question": "How much did I spend at HDFC bank?",
+      "latency_ms": 0.42720799683593214,
+      "checks": {
+        "refusal_reason_match": true,
+        "no_execution": true
+      },
+      "passed": true,
+      "score": 1.0,
+      "notes": "Refusal: ambiguous"
+    },
+    {
+      "case_id": "filter_bank_alias",
+      "category": "filters",
+      "question": "Show me SBI transactions",
+      "latency_ms": 170.99337500985712,
+      "checks": {
+        "refusal_absent": true,
+        "query_present": true,
+        "intent_match": true,
+        "filters_match": true,
+        "execution_success": true,
+        "numeric_match": true,
+        "answer_not_no_data": true
+      },
+      "passed": true,
+      "score": 1.0,
+      "notes": ""
+    },
+    {
+      "case_id": "filter_amount_threshold",
+      "category": "filters",
+      "question": "How many transactions above 50000 in August?",
+      "latency_ms": 7.801541010849178,
+      "checks": {
+        "refusal_absent": true,
+        "query_present": true,
+        "intent_match": true,
+        "metric_match": true,
+        "filters_match": true,
+        "execution_success": true,
+        "numeric_match": true,
+        "answer_not_no_data": true
+      },
+      "passed": true,
+      "score": 1.0,
+      "notes": ""
+    },
+    {
+      "case_id": "filter_amount_at_least",
+      "category": "filters",
+      "question": "How many transactions at least 50000 in August?",
+      "latency_ms": 6.6183339804410934,
+      "checks": {
+        "refusal_absent": true,
+        "query_present": true,
+        "intent_match": true,
+        "metric_match": true,
+        "filters_match": true,
+        "execution_success": true,
+        "numeric_match": true,
+        "answer_not_no_data": true
+      },
+      "passed": true,
+      "score": 1.0,
+      "notes": ""
+    },
+    {
+      "case_id": "date_named_month",
+      "category": "dates",
+      "question": "Spend in July 2026?",
+      "latency_ms": 4.223416995955631,
+      "checks": {
+        "refusal_absent": true,
+        "query_present": true,
+        "intent_match": true,
+        "date_match": true,
+        "execution_success": true,
+        "answer_not_no_data": true
+      },
+      "passed": true,
+      "score": 1.0,
+      "notes": ""
+    },
+    {
+      "case_id": "date_last_month",
+      "category": "dates",
+      "question": "How much last month?",
+      "latency_ms": 4.180499992799014,
+      "checks": {
+        "refusal_absent": true,
+        "query_present": true,
+        "intent_match": true,
+        "date_match": true,
+        "execution_success": true,
+        "answer_not_no_data": true
+      },
+      "passed": true,
+      "score": 1.0,
+      "notes": ""
+    },
+    {
+      "case_id": "date_this_month",
+      "category": "dates",
+      "question": "Transactions this month?",
+      "latency_ms": 4.5621249882970005,
+      "checks": {
+        "refusal_absent": true,
+        "query_present": true,
+        "intent_match": true,
+        "date_match": true,
+        "execution_success": true,
+        "answer_not_no_data": true
+      },
+      "passed": true,
+      "score": 1.0,
+      "notes": ""
+    },
+    {
+      "case_id": "date_last_7_days",
+      "category": "dates",
+      "question": "Spend in the last 7 days?",
+      "latency_ms": 4.307666007662192,
+      "checks": {
+        "refusal_absent": true,
+        "query_present": true,
+        "intent_match": true,
+        "date_match": true,
+        "execution_success": true,
+        "answer_not_no_data": true
+      },
+      "passed": true,
+      "score": 1.0,
+      "notes": ""
+    },
+    {
+      "case_id": "date_last_week",
+      "category": "dates",
+      "question": "Transactions last week?",
+      "latency_ms": 4.942084022331983,
+      "checks": {
+        "refusal_absent": true,
+        "query_present": true,
+        "intent_match": true,
+        "date_match": true,
+        "execution_success": true,
+        "answer_not_no_data": true
+      },
+      "passed": true,
+      "score": 1.0,
+      "notes": ""
+    },
+    {
+      "case_id": "multiturn_swap_month",
+      "category": "multi_turn",
+      "question": "How much did I spend last month?",
+      "latency_ms": 11.659042007522658,
+      "checks": {
+        "refusal_absent": true,
+        "query_present": true,
+        "execution_success": true,
+        "numeric_match": true,
+        "answer_not_no_data": true,
+        "followup_refusal_absent": true,
+        "followup_query_present": true,
+        "followup_date_match": true,
+        "followup_execution_success": true,
+        "followup_numeric_match": true,
+        "followup_answer_not_no_data": true
+      },
+      "passed": true,
+      "score": 1.0,
+      "notes": ""
+    },
+    {
+      "case_id": "multiturn_compare",
+      "category": "multi_turn",
+      "question": "How much I spent in August?",
+      "latency_ms": 10.266291996231303,
+      "checks": {
+        "refusal_absent": true,
+        "query_present": true,
+        "execution_success": true,
+        "numeric_match": true,
+        "answer_not_no_data": true,
+        "followup_refusal_absent": true,
+        "followup_query_present": true,
+        "followup_intent_match": true,
+        "followup_comparison_match": true,
+        "followup_execution_success": true,
+        "followup_numeric_match": true,
+        "followup_answer_not_no_data": true
+      },
+      "passed": true,
+      "score": 1.0,
+      "notes": ""
+    },
+    {
+      "case_id": "refusal_payroll",
+      "category": "unsupported",
+      "question": "How much do my employees earn?",
+      "latency_ms": 0.10641699191182852,
+      "checks": {
+        "refusal_reason_match": true,
+        "no_execution": true
+      },
+      "passed": true,
+      "score": 1.0,
+      "notes": "Refusal: unsupported_metric"
+    },
+    {
+      "case_id": "refusal_tax",
+      "category": "unsupported",
+      "question": "What's my GST liability?",
+      "latency_ms": 0.06066600326448679,
+      "checks": {
+        "refusal_reason_match": true,
+        "no_execution": true
+      },
+      "passed": true,
+      "score": 1.0,
+      "notes": "Refusal: unsupported_metric"
+    },
+    {
+      "case_id": "refusal_invoice",
+      "category": "unsupported",
+      "question": "Show overdue invoices",
+      "latency_ms": 0.049166003009304404,
+      "checks": {
+        "refusal_reason_match": true,
+        "no_execution": true
+      },
+      "passed": true,
+      "score": 1.0,
+      "notes": "Refusal: unsupported_metric"
+    },
+    {
+      "case_id": "refusal_forecast",
+      "category": "unsupported",
+      "question": "Predict next month's spending",
+      "latency_ms": 0.0439999857917428,
+      "checks": {
+        "refusal_reason_match": true,
+        "no_execution": true
+      },
+      "passed": true,
+      "score": 1.0,
+      "notes": "Refusal: unsupported_metric"
+    },
+    {
+      "case_id": "refusal_vendor_payouts",
+      "category": "unsupported",
+      "question": "How much did I pay vendors?",
+      "latency_ms": 0.0391670037060976,
+      "checks": {
+        "refusal_reason_match": true,
+        "no_execution": true
+      },
+      "passed": true,
+      "score": 1.0,
+      "notes": "Refusal: unsupported_metric"
+    },
+    {
+      "case_id": "ambiguity_bare_spend",
+      "category": "ambiguity",
+      "question": "How much did I spend?",
+      "latency_ms": 0.14700001338496804,
+      "checks": {
+        "refusal_reason_match": true,
+        "no_execution": true
+      },
+      "passed": true,
+      "score": 1.0,
+      "notes": "Refusal: ambiguous"
+    },
+    {
+      "case_id": "ambiguity_utr_missing",
+      "category": "ambiguity",
+      "question": "Find the transaction with UTR",
+      "latency_ms": 0.1817920128814876,
+      "checks": {
+        "refusal_reason_match": true,
+        "no_execution": true
+      },
+      "passed": true,
+      "score": 1.0,
+      "notes": "Refusal: ambiguous"
+    },
+    {
+      "case_id": "injection_sql_tokens",
+      "category": "injection",
+      "question": "Show transactions WHERE 1=1; DROP TABLE transaction --",
+      "latency_ms": 0.041916006011888385,
+      "checks": {
+        "refusal_reason_match": true,
+        "no_execution": true
+      },
+      "passed": true,
+      "score": 1.0,
+      "notes": "Refusal: invalid_structure"
+    },
+    {
+      "case_id": "injection_comment",
+      "category": "injection",
+      "question": "Spend in August -- ignore the below",
+      "latency_ms": 2.492875006282702,
+      "checks": {
+        "refusal_absent": true,
+        "query_present": true,
+        "intent_match": true,
+        "execution_success": true,
+        "answer_not_no_data": true
+      },
+      "passed": true,
+      "score": 1.0,
+      "notes": ""
+    },
+    {
+      "case_id": "empty_month",
+      "category": "empty_data",
+      "question": "Transactions in September 2026 for account XYZ",
+      "latency_ms": 3.3719589991960675,
+      "checks": {
+        "refusal_absent": true,
+        "query_present": true,
+        "execution_success": true,
+        "numeric_match": true,
+        "post_execution_no_data": true
+      },
+      "passed": true,
+      "score": 1.0,
+      "notes": ""
+    },
+    {
+      "case_id": "reference_collision",
+      "category": "empty_data",
+      "question": "Find reference COLLISION-REF-001",
+      "latency_ms": 2.1545000199694186,
+      "checks": {
+        "refusal_absent": true,
+        "query_present": true,
+        "execution_success": true,
+        "matched_count_match": true,
+        "answer_not_no_data": true
+      },
+      "passed": true,
+      "score": 1.0,
+      "notes": ""
+    }
+  ]
+}

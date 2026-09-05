@@ -1,0 +1,6 @@
+.serena/
+.env
+__pycache__/
+*.py[cod]
+artha.duckdb
+/results.json

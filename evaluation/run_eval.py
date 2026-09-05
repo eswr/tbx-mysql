@@ -1,275 +1,265 @@
 #!/usr/bin/env python3
-"""
-Evaluation harness for Artha.
+"""Database-grounded evaluation harness for Artha."""
 
-Scores query understanding (rules + LLM fallback) on:
-  - Structural correctness (intent, metric, aggregation, filters, date ranges match expected)
-  - Numeric exactness (oracle SQL vs engine result)
-  - Refusal correctness (unsupported/ambiguous cases)
-  - Safety (injection, fabrication)
-  - Latency and LLM call efficiency
-  - Per-category accuracy
-
-Usage:
-  python evaluation/run_eval.py --engine duckdb --provider rules
-  python evaluation/run_eval.py --engine mysql --provider ollama --model qwen3.5:0.8b --force-llm
-"""
-
+import argparse
 import asyncio
+import hashlib
 import json
 import sys
 import time
+from datetime import date, datetime, timezone
+from decimal import Decimal
 from pathlib import Path
-from datetime import datetime
-from typing import Any
+from typing import Any, Callable
+from unittest.mock import patch
 
-import pymysql
-import duckdb
+ROOT = Path(__file__).resolve().parent.parent
+BACKEND = ROOT / "backend"
+sys.path.insert(0, str(BACKEND))
 
-# Add parent to path
-sys.path.insert(0, str(Path(__file__).parent.parent / "backend"))
-
-from app.understanding.rules import understand_question
-from app.understanding.dates import today_ist
-from app.schemas.financial_query import FinancialQuery, QueryRefusal, QueryRefusalReason
-from app.query.mysql_engine import MySQLQueryEngine
+from app.conversation import ConversationContext, InMemoryConversationStore
 from app.query.duckdb_engine import DuckDBQueryEngine
+from app.query.execution import FinancialQueryExecutor, GroundedResult
+from app.query.mysql_engine import MySQLQueryEngine
+from app.schemas.financial_query import FinancialQuery, QueryRefusal
+
+REFERENCE_DATE = date(2026, 9, 5)
+CASES_FILE = Path(__file__).parent / "cases.json"
+RULES_FILE = BACKEND / "app" / "understanding" / "rules.py"
 
 
-def load_eval_cases() -> list[dict]:
-    """Load evaluation cases from JSON."""
-    cases_file = Path(__file__).parent / "cases.json"
-    with open(cases_file) as f:
-        return json.load(f)
+def _sha256(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-async def score_case(
-    case: dict,
-    engine: Any,
-    force_llm: bool = False,
-) -> dict:
-    """
-    Score a single evaluation case.
-    
-    Returns:
-        {
-            "case_id": str,
-            "category": str,
-            "question": str,
-            "passed": bool,
-            "score": 0-1,
-            "intent_match": bool,
-            "metric_match": bool,
-            "filters_match": bool,
-            "date_match": bool,
-            "refusal_reason_match": bool,
-            "numeric_match": bool,
-            "latency_ms": float,
-            "notes": str,
-        }
-    """
-    case_id = case["id"]
-    category = case["category"]
-    question = case["question"]
-    
-    start_time = time.perf_counter()
-    
-    # Parse with rules
-    result = understand_question(question)
-    
-    latency_ms = (time.perf_counter() - start_time) * 1000
-    
-    # Score the result
-    score_details = {
-        "case_id": case_id,
-        "category": category,
-        "question": question,
-        "latency_ms": latency_ms,
-        "intent_match": False,
-        "metric_match": False,
-        "filters_match": False,
-        "date_match": False,
-        "refusal_reason_match": False,
-        "numeric_match": False,
+def load_eval_cases(path: Path = CASES_FILE) -> list[dict]:
+    cases = json.loads(path.read_text())
+    ids = [case["id"] for case in cases]
+    if len(ids) != len(set(ids)):
+        raise ValueError("Evaluation case ids must be unique")
+    for case in cases:
+        refusal = case.get("expected_refusal_reason")
+        if (
+            refusal
+            and refusal != "no_data"
+            and any(key in case for key in ("oracle_sql", "expected_intent", "expected_metric"))
+        ):
+            raise ValueError(f"Pre-execution refusal case {case['id']} has answer expectations")
+        if "followup" in case and case.get("category") != "multi_turn":
+            raise ValueError(f"Follow-up case {case['id']} must be multi_turn")
+    return cases
+
+
+def parse_with_rules(question: str, context: ConversationContext | None = None) -> FinancialQuery | QueryRefusal | None:
+    """Call rules with a fixed clock; context support is added only after baseline."""
+    from app.understanding.rules import understand_question
+
+    with patch("app.understanding.rules.today_ist", return_value=REFERENCE_DATE):
+        return understand_question(question, context=context, reference_date=REFERENCE_DATE)
+
+
+def _canonical(value: Any) -> Any:
+    if isinstance(value, Decimal):
+        return value.normalize()
+    if isinstance(value, float):
+        return Decimal(str(value)).normalize()
+    if isinstance(value, (datetime, date)):
+        return value.isoformat()
+    return value
+
+
+def _filter_match(actual: Any, expected: dict) -> bool:
+    for key, expected_value in expected.items():
+        actual_value = getattr(actual, key)
+        if isinstance(actual_value, Decimal):
+            if actual_value != Decimal(str(expected_value)):
+                return False
+        elif actual_value != expected_value:
+            return False
+    return True
+
+
+def _oracle_sqls(value: Any) -> list[str]:
+    if value is None:
+        return []
+    return value if isinstance(value, list) else [value]
+
+
+def _actual_numeric(query: FinancialQuery, grounded: GroundedResult) -> list[Any]:
+    if grounded.comparison_matched_count is not None:
+        return [_canonical(grounded.value), _canonical(grounded.comparison_value)]
+    if query.aggregation.value == "none":
+        return [grounded.matched_count]
+    return [_canonical(grounded.value)]
+
+
+def _oracle_numeric(grounded: GroundedResult) -> list[Any]:
+    return [_canonical(rows[0][0]) if rows else None for rows in grounded.oracle_rows or []]
+
+
+def _new_score(case: dict) -> dict:
+    return {
+        "case_id": case["id"],
+        "category": case["category"],
+        "question": case["question"],
+        "latency_ms": 0.0,
+        "checks": {},
+        "passed": False,
+        "score": 0.0,
         "notes": "",
     }
-    
-    # Check if we expected a refusal
-    if "expected_refusal_reason" in case:
-        if isinstance(result, QueryRefusal):
-            score_details["refusal_reason_match"] = result.reason.value == case["expected_refusal_reason"]
-            score_details["notes"] = f"Refusal: {result.reason.value}"
-        else:
-            score_details["notes"] = f"Expected refusal {case['expected_refusal_reason']}, got query"
-    
-    elif isinstance(result, QueryRefusal):
-        score_details["notes"] = f"Unexpected refusal: {result.reason.value}"
-    
-    elif isinstance(result, FinancialQuery):
-        # Check intent
-        if "expected_intent" in case:
-            score_details["intent_match"] = result.intent.value == case["expected_intent"]
-        
-        # Check metric
-        if "expected_metric" in case:
-            score_details["metric_match"] = result.metric.value == case["expected_metric"]
-        
-        # Check filters
-        if "expected_filters" in case:
-            expected_filters = case["expected_filters"]
-            score_details["filters_match"] = all(
-                getattr(result.filters, k) == v for k, v in expected_filters.items()
-            )
-        
-        # Check date range
-        if "expected_date_start" in case:
-            score_details["date_match"] = (
-                result.date_range.start.isoformat() == case["expected_date_start"] and
-                result.date_range.end.isoformat() == case["expected_date_end"]
-            )
-        
-        # TODO: Execute and check numeric correctness against oracle SQL
-        score_details["numeric_match"] = True  # Placeholder
-    
-    else:
-        score_details["notes"] = "Failed to parse (returned None)"
-    
-    # Calculate overall score
-    checks = [
-        score_details.get("intent_match", False),
-        score_details.get("metric_match", False),
-        score_details.get("filters_match", False),
-        score_details.get("date_match", False),
-        score_details.get("refusal_reason_match", False),
-        score_details.get("numeric_match", False),
-    ]
-    checks = [c for c in checks if c is not None]  # Filter out None
-    
-    if checks:
-        score_details["score"] = sum(checks) / len(checks)
-    else:
-        score_details["score"] = 0.0
-    
-    score_details["passed"] = score_details["score"] >= 0.8
-    
-    return score_details
 
 
-async def run_eval(
-    engine_name: str = "duckdb",
-    provider: str = "rules",
-    model: str | None = None,
-    force_llm: bool = False,
-) -> dict:
-    """
-    Run full evaluation suite.
-    
-    Returns:
-        {
-            "provider": str,
-            "model": str,
-            "engine": str,
-            "total": int,
-            "passed": int,
-            "accuracy": float,
-            "scores_by_category": {category: accuracy},
-            "p50_latency_ms": float,
-            "p95_latency_ms": float,
-            "llm_calls_total": int,
-            "cases": [score_details],
-        }
-    """
+def _add_query_checks(checks: dict[str, bool], case: dict, query: FinancialQuery, prefix: str = "") -> None:
+    def get(name: str):
+        key = f"expected_{prefix}{name}"
+        return (key, case[key]) if key in case else (None, None)
+
+    key, value = get("intent")
+    if key:
+        checks[f"{prefix}intent_match"] = query.intent.value == value
+    key, value = get("metric")
+    if key:
+        checks[f"{prefix}metric_match"] = query.metric.value == value
+    key, value = get("aggregation")
+    if key:
+        checks[f"{prefix}aggregation_match"] = query.aggregation.value == value
+    key, value = get("filters")
+    if key:
+        checks[f"{prefix}filters_match"] = _filter_match(query.filters, value)
+    start_key, start = get("date_start")
+    end_key, end = get("date_end")
+    if start_key or end_key:
+        checks[f"{prefix}date_match"] = (
+            bool(start_key and end_key)
+            and query.date_range.start.isoformat() == start
+            and query.date_range.end.isoformat() == end
+        )
+    key, value = get("comparison_against")
+    if key:
+        checks[f"{prefix}comparison_match"] = query.comparison is not None and query.comparison.against == value
+
+
+async def _score_answer_turn(
+    case: dict,
+    question: str,
+    parser: Callable,
+    executor: FinancialQueryExecutor,
+    context: ConversationContext | None,
+    prefix: str = "",
+):
+    checks = case["_checks"]
+    result = parser(question, context)
+    checks[f"{prefix}refusal_absent"] = not isinstance(result, QueryRefusal)
+    checks[f"{prefix}query_present"] = isinstance(result, FinancialQuery)
+    if not isinstance(result, FinancialQuery):
+        reason = result.reason.value if isinstance(result, QueryRefusal) else "none"
+        return None, None, f"Unexpected parse outcome: {reason}"
+    _add_query_checks(checks, case, result, prefix)
+    oracle_key = f"{prefix}oracle_sql" if prefix else "oracle_sql"
+    sqls = _oracle_sqls(case.get(oracle_key))
+    try:
+        grounded = await executor.execute(result, sqls)
+    except Exception as exc:
+        checks[f"{prefix}execution_success"] = False
+        return result, None, f"Execution failed: {exc}"
+    checks[f"{prefix}execution_success"] = True
+    if sqls:
+        checks[f"{prefix}numeric_match"] = _actual_numeric(result, grounded) == _oracle_numeric(grounded)
+    range_key = f"expected_{prefix}matched_count_range"
+    if range_key in case:
+        low, high = case[range_key]
+        checks[f"{prefix}matched_count_match"] = low <= grounded.matched_count <= high
+    return result, grounded, ""
+
+
+async def score_case(case: dict, executor: FinancialQueryExecutor, parser: Callable = parse_with_rules) -> dict:
+    score = _new_score(case)
+    checks = score["checks"]
+    case = {**case, "_checks": checks}
+    started = time.perf_counter()
+    expected_refusal = case.get("expected_refusal_reason")
+    if expected_refusal and expected_refusal != "no_data":
+        before = executor.execution_count
+        result = parser(case["question"], None)
+        checks["refusal_reason_match"] = isinstance(result, QueryRefusal) and result.reason.value == expected_refusal
+        checks["no_execution"] = executor.execution_count == before
+        score["notes"] = (
+            f"Refusal: {result.reason.value}" if isinstance(result, QueryRefusal) else "Expected refusal, got answer"
+        )
+    else:
+        query, grounded, note = await _score_answer_turn(case, case["question"], parser, executor, None)
+        score["notes"] = note
+        if expected_refusal == "no_data":
+            checks["post_execution_no_data"] = grounded is not None and grounded.no_data and grounded.matched_count == 0
+        elif grounded is not None:
+            checks["answer_not_no_data"] = not grounded.no_data
+        if case.get("followup") and query is not None and grounded is not None:
+            store = InMemoryConversationStore()
+            store.put(case["id"], ConversationContext.from_query(query))
+            _, follow_grounded, follow_note = await _score_answer_turn(
+                case, case["followup"], parser, executor, store.get(case["id"]), "followup_"
+            )
+            if follow_note:
+                score["notes"] = follow_note
+            if follow_grounded is not None:
+                checks["followup_answer_not_no_data"] = not follow_grounded.no_data
+    score["latency_ms"] = (time.perf_counter() - started) * 1000
+    applicable = list(checks.values())
+    score["score"] = sum(applicable) / len(applicable) if applicable else 0.0
+    score["passed"] = bool(applicable) and all(applicable)
+    return score
+
+
+async def run_eval(engine_name: str, db_target: str, parser: Callable = parse_with_rules) -> dict:
     cases = load_eval_cases()
-    
-    # Initialize engine
-    if engine_name == "duckdb":
-        engine = DuckDBQueryEngine("artha.duckdb")
-    elif engine_name == "mysql":
-        engine = MySQLQueryEngine("mysql://artha:artha@127.0.0.1:3306/artha")
-    else:
-        raise ValueError(f"Unknown engine: {engine_name}")
-    
-    # Run eval cases
-    scores = []
-    for case in cases:
-        score = await score_case(case, engine, force_llm=force_llm)
-        scores.append(score)
-    
-    # Aggregate results
-    passed = sum(1 for s in scores if s["passed"])
-    total = len(scores)
-    accuracy = passed / total if total > 0 else 0.0
-    
-    # By category
-    scores_by_category = {}
-    for category in set(s["category"] for s in scores):
-        cat_scores = [s["score"] for s in scores if s["category"] == category]
-        scores_by_category[category] = sum(cat_scores) / len(cat_scores) if cat_scores else 0.0
-    
-    # Latencies
-    latencies = sorted([s["latency_ms"] for s in scores])
-    p50 = latencies[len(latencies) // 2] if latencies else 0
-    p95 = latencies[int(len(latencies) * 0.95)] if latencies else 0
-    
+    engine = DuckDBQueryEngine(db_target) if engine_name == "duckdb" else MySQLQueryEngine(db_target)
+    if not await engine.ping():
+        raise RuntimeError(f"{engine_name} is unavailable")
+    executor = FinancialQueryExecutor(engine)
+    scores = [await score_case(case, executor, parser) for case in cases]
+    by_category = {}
+    for category in sorted({item["category"] for item in scores}):
+        selected = [item for item in scores if item["category"] == category]
+        by_category[category] = sum(item["passed"] for item in selected) / len(selected)
+    latencies = sorted(item["latency_ms"] for item in scores)
     return {
-        "provider": provider,
-        "model": model or "none",
+        "provider": "rules",
         "engine": engine_name,
-        "total": total,
-        "passed": passed,
-        "accuracy": accuracy,
-        "scores_by_category": scores_by_category,
-        "p50_latency_ms": p50,
-        "p95_latency_ms": p95,
-        "llm_calls_total": 0,  # Placeholder
-        "ran_at": datetime.utcnow().isoformat() + "Z",
+        "reference_date": REFERENCE_DATE.isoformat(),
+        "fixture_seed": 42,
+        "fixture_version": 1,
+        "rules_sha256": _sha256(RULES_FILE),
+        "cases_sha256": _sha256(CASES_FILE),
+        "total": len(scores),
+        "passed": sum(item["passed"] for item in scores),
+        "accuracy": sum(item["passed"] for item in scores) / len(scores),
+        "scores_by_category": by_category,
+        "p50_latency_ms": latencies[len(latencies) // 2],
+        "p95_latency_ms": latencies[min(len(latencies) - 1, int(len(latencies) * 0.95))],
+        "ran_at": datetime.now(timezone.utc).isoformat(),
         "cases": scores,
     }
 
 
-def main():
-    import argparse
-    parser = argparse.ArgumentParser(description="Artha evaluation harness")
+def main() -> int:
+    parser = argparse.ArgumentParser()
     parser.add_argument("--engine", choices=["duckdb", "mysql"], default="duckdb")
-    parser.add_argument("--provider", choices=["rules", "ollama"], default="rules")
-    parser.add_argument("--model", help="Model name (for Ollama)")
-    parser.add_argument("--force-llm", action="store_true", help="Force LLM even for rule-solvable cases")
-    parser.add_argument("--output", help="Output JSON file")
-    
+    parser.add_argument("--duckdb-path", default="artha.duckdb")
+    parser.add_argument("--mysql-url", default="mysql://artha:artha@127.0.0.1:3306/artha")
+    parser.add_argument("--provider", choices=["rules"], default="rules")
+    parser.add_argument("--output")
     args = parser.parse_args()
-    
-    # Run eval
-    result = asyncio.run(run_eval(
-        engine_name=args.engine,
-        provider=args.provider,
-        model=args.model,
-        force_llm=args.force_llm,
-    ))
-    
-    # Print summary
-    print(f"\n{'='*60}")
-    print(f"Artha Evaluation Results")
-    print(f"{'='*60}")
-    print(f"Provider: {result['provider']}")
-    if result['model'] != 'none':
-        print(f"Model: {result['model']}")
-    print(f"Engine: {result['engine']}")
-    print(f"Total cases: {result['total']}")
-    print(f"Passed: {result['passed']}")
-    print(f"Accuracy: {result['accuracy']:.1%}")
-    print(f"Latency (p50/p95): {result['p50_latency_ms']:.1f}/{result['p95_latency_ms']:.1f} ms")
-    print(f"\nBy category:")
-    for cat, acc in sorted(result['scores_by_category'].items()):
-        print(f"  {cat:20s}: {acc:.1%}")
-    
-    # Write output
+    target = args.duckdb_path if args.engine == "duckdb" else args.mysql_url
+    result = asyncio.run(run_eval(args.engine, target))
+    print(f"{result['engine']}: {result['passed']}/{result['total']} ({result['accuracy']:.1%})")
+    for category, accuracy in result["scores_by_category"].items():
+        print(f"  {category}: {accuracy:.1%}")
     if args.output:
-        with open(args.output, "w") as f:
-            json.dump(result, f, indent=2)
-        print(f"\nResults written to: {args.output}")
-    
-    return 0 if result["accuracy"] >= 0.9 else 1
+        Path(args.output).write_text(json.dumps(result, indent=2, default=str) + "\n")
+        print(f"Results written to {args.output}")
+    return 0 if result["passed"] == result["total"] else 1
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    raise SystemExit(main())

@@ -1,10 +1,7 @@
 """MySQL query engine for production and parity testing."""
 
-import asyncio
 import logging
 from datetime import datetime
-from decimal import Decimal
-from typing import Any
 from urllib.parse import urlparse
 
 import pymysql
@@ -20,17 +17,17 @@ logger = logging.getLogger(__name__)
 
 class MySQLQueryEngine(QueryEngine):
     """Query engine backed by MySQL."""
-    
+
     def __init__(self, db_url: str):
         self.db_url = db_url
         self.dialect = MySQLDialect()
         self.conn_kwargs = self._parse_url(db_url)
-    
+
     def _parse_url(self, db_url: str) -> dict:
         """Parse MySQL URL and return connection kwargs."""
         if not db_url.startswith("mysql://"):
             db_url = f"mysql://{db_url}"
-        
+
         parsed = urlparse(db_url)
         return {
             "host": parsed.hostname or "127.0.0.1",
@@ -42,32 +39,32 @@ class MySQLQueryEngine(QueryEngine):
             "cursorclass": DictCursor,
             "autocommit": True,
         }
-    
+
     def _get_connection(self):
         """Get a new connection."""
         return pymysql.connect(**self.conn_kwargs)
-    
+
     async def discover_capabilities(self) -> Capabilities:
         """Probe the MySQL database."""
         caps = Capabilities()
-        
+
         conn = self._get_connection()
         cursor = conn.cursor()
-        
+
         try:
             # Check tables
             cursor.execute(
                 f"SELECT table_name FROM information_schema.tables WHERE table_schema='{self.conn_kwargs['database']}'"
             )
             caps.tables = [row["table_name"] for row in cursor.fetchall()]
-            
+
             # Check columns per table
             for table in caps.tables:
                 cursor.execute(
                     f"SELECT column_name FROM information_schema.columns WHERE table_schema='{self.conn_kwargs['database']}' AND table_name='{table}'"
                 )
                 caps.columns[table] = [row["column_name"] for row in cursor.fetchall()]
-            
+
             # Probe debit sign convention
             try:
                 cursor.execute(
@@ -81,12 +78,10 @@ class MySQLQueryEngine(QueryEngine):
                         caps.debit_sign = "positive"
             except Exception as e:
                 logger.warning(f"Failed to probe debit sign: {e}")
-            
+
             # Probe date granularity
             try:
-                cursor.execute(
-                    "SELECT transaction_date FROM `transaction` LIMIT 1"
-                )
+                cursor.execute("SELECT transaction_date FROM `transaction` LIMIT 1")
                 result = cursor.fetchone()
                 if result:
                     ts = result["transaction_date"]
@@ -96,36 +91,34 @@ class MySQLQueryEngine(QueryEngine):
                         caps.date_granularity = "date"
             except Exception as e:
                 logger.warning(f"Failed to probe date granularity: {e}")
-            
+
             # Get bank list (authoritative)
             try:
                 cursor.execute("SELECT bank_code, bank_name FROM bank ORDER BY bank_code")
                 caps.banks = [BankInfo(code=row["bank_code"], name=row["bank_name"]) for row in cursor.fetchall()]
             except Exception as e:
                 logger.warning(f"Failed to load banks: {e}")
-            
+
             # Get counts
             try:
                 cursor.execute("SELECT COUNT(*) as cnt FROM account")
                 caps.account_count = cursor.fetchone()["cnt"]
-                
+
                 cursor.execute("SELECT COUNT(*) as cnt FROM `transaction`")
                 caps.transaction_count = cursor.fetchone()["cnt"]
             except:
                 pass
-            
+
             # Get date range
             try:
-                cursor.execute(
-                    "SELECT MIN(transaction_date) as start, MAX(transaction_date) as end FROM `transaction`"
-                )
+                cursor.execute("SELECT MIN(transaction_date) as start, MAX(transaction_date) as end FROM `transaction`")
                 result = cursor.fetchone()
                 if result and result["start"]:
                     caps.date_range_start = result["start"]
                     caps.date_range_end = result["end"]
             except Exception as e:
                 logger.warning(f"Failed to get date range: {e}")
-            
+
             # Check if UTR index exists (for plaintext mode)
             try:
                 cursor.execute(
@@ -137,61 +130,89 @@ class MySQLQueryEngine(QueryEngine):
                     caps.utr_mode = "opaque"
             except:
                 caps.utr_mode = "plaintext"
-        
+
         except Exception as e:
             logger.error(f"Capability discovery failed: {e}")
             caps.warnings.append(f"Discovery error: {e}")
-        
+
         finally:
             cursor.close()
             conn.close()
-        
+
         return caps
-    
+
     async def execute_logical_plan(self, plan: LogicalPlan) -> dict:
         """Execute a LogicalPlan."""
         compiled = render_sql(plan, self.dialect)
-        
+
         # Validate
         validate_sql_select_only(compiled.sql, "mysql")
-        
+
         logger.debug(f"MySQL SQL: {compiled.sql}")
         logger.debug(f"Params: {compiled.params}")
-        
+
         conn = self._get_connection()
         cursor = conn.cursor()
-        
+
         try:
             # Set session options for safety and consistency
             cursor.execute("SET SESSION TRANSACTION READ ONLY")
             cursor.execute("SET SESSION MAX_EXECUTION_TIME=10000")
-            
+
             cursor.execute(compiled.sql, compiled.params)
             rows = cursor.fetchall()
-            
+
             # Apply masking
             rows = [mask_record(r) for r in rows]
-            
+
             return {
                 "rows": rows,
                 "sql": compiled.sql,
                 "dialect": "mysql",
             }
-        
+
         finally:
             cursor.close()
             conn.close()
-    
+
+    async def execute_snapshot(self, plans: list[LogicalPlan], oracle_sqls: list[str] | None = None) -> dict:
+        """Execute result, evidence count, and oracle reads in one read-only consistent snapshot."""
+        compiled_plans = [render_sql(plan, self.dialect) for plan in plans]
+        for compiled in compiled_plans:
+            validate_sql_select_only(compiled.sql, "mysql")
+        for sql in oracle_sqls or []:
+            validate_sql_select_only(sql, "mysql")
+
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        plan_rows = []
+        oracle_rows = []
+        try:
+            cursor.execute("SET SESSION MAX_EXECUTION_TIME=10000")
+            cursor.execute("SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY")
+            cursor.execute("START TRANSACTION WITH CONSISTENT SNAPSHOT")
+            for compiled in compiled_plans:
+                cursor.execute(compiled.sql, compiled.params)
+                plan_rows.append([mask_record(row) for row in cursor.fetchall()])
+            for sql in oracle_sqls or []:
+                cursor.execute(sql)
+                rows = cursor.fetchall()
+                oracle_rows.append([tuple(row.values()) for row in rows])
+        finally:
+            conn.rollback()
+            cursor.close()
+            conn.close()
+        return {"plan_rows": plan_rows, "oracle_rows": oracle_rows, "sql": [item.sql for item in compiled_plans]}
+
     async def execute_transaction_list(
         self,
         predicates: list,
         order_by: list,
         limit: int,
     ) -> dict:
-        """Execute a transaction list query."""
-        # TODO: implement
-        pass
-    
+        """Legacy API retained for interface compatibility."""
+        raise NotImplementedError("Use execute_logical_plan or execute_snapshot")
+
     async def execute_aggregation(
         self,
         aggregations: dict,
@@ -200,10 +221,9 @@ class MySQLQueryEngine(QueryEngine):
         order_by: list | None = None,
         limit: int | None = None,
     ) -> dict:
-        """Execute an aggregation query."""
-        # TODO: implement
-        pass
-    
+        """Legacy API retained for interface compatibility."""
+        raise NotImplementedError("Use execute_logical_plan or execute_snapshot")
+
     async def ping(self) -> bool:
         """Test connectivity."""
         try:

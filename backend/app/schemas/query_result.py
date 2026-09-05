@@ -2,15 +2,15 @@
 Query result schema: what engines return after executing a query.
 """
 
-from datetime import datetime
 from decimal import Decimal
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
 
 class HowCalculated(BaseModel):
     """Metadata about how a result was computed."""
+
     date_range: str  # "August 2026" or "2026-08-01 to 2026-08-31"
     operation: str  # "SUM(transaction_amount)", "COUNT(*)", etc.
     records_matched: int  # Total rows matched before LIMIT
@@ -21,6 +21,7 @@ class HowCalculated(BaseModel):
 
 class Breakdown(BaseModel):
     """One row of a grouped result (e.g., spending by bank)."""
+
     key: str  # The group key: bank_code, account_id, month label, etc.
     value: Decimal  # The aggregated metric: sum, count, avg, etc.
     count: int | None = None  # For summaries, often include count alongside sum
@@ -28,6 +29,7 @@ class Breakdown(BaseModel):
 
 class EvidenceRow(BaseModel):
     """One transaction row in the evidence set."""
+
     transaction_id: str
     account_id: str
     transaction_date: str  # ISO date or datetime
@@ -40,6 +42,7 @@ class EvidenceRow(BaseModel):
 
 class Evidence(BaseModel):
     """Proof of a result: how it was calculated and sample rows."""
+
     how_calculated: HowCalculated
     source: str  # "transaction", "account_balance", etc.
     grounded: bool  # True = derived from data; False = could not be grounded
@@ -51,12 +54,14 @@ class Evidence(BaseModel):
 
 class Confidence(BaseModel):
     """Confidence assessment of the result."""
+
     level: Literal["high", "medium", "low"] = "high"  # high=rule-derived; medium=LLM-parsed; low=error/warning
     basis: list[str] = Field(default_factory=list)  # Why this confidence: ["rule-parsed", "all-fields-valid", ...]
 
 
 class QueryResult(BaseModel):
     """Complete result from executing a FinancialQuery."""
+
     summary: str  # Human-facing answer: "You spent ₹X in August across N transactions"
     interpretation: dict[str, Any] | None = None  # The parsed query: intent, metric, filters, date_range
     calculation: str | None = None  # How the number was computed: "SUM(debit transactions in Aug 2026)"

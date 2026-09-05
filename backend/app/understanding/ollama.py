@@ -171,7 +171,7 @@ async def understand_with_ollama(
                 )
             
             # Otherwise, construct FinancialQuery
-            # TODO: full construction with date_range resolution
+            # Experimental adapter construction remains outside the production rule path.
             return None  # Placeholder
     
     except httpx.ConnectError as e:

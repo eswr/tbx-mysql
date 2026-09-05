@@ -1,10 +1,7 @@
 """Shared pytest fixtures."""
 
-import asyncio
-import os
 import subprocess
 import sys
-import time
 from pathlib import Path
 
 import pytest
@@ -14,35 +11,35 @@ import pytest
 def fixture_dir():
     """Generate and return fixture CSV directory."""
     fixture_path = Path("/tmp/artha_parity_fixture")
-    
+
     if not fixture_path.exists():
         # Generate fixture
         sys.path.insert(0, str(Path(__file__).parent.parent))
         from fixtures.generate_fixture import generate_fixture, write_csvs
-        
+
         data = generate_fixture(seed=42, n_accounts=25, n_transactions_per_account=320)
         write_csvs(data, str(fixture_path))
-    
+
     return str(fixture_path)
 
 
 @pytest.fixture(scope="session")
 def duckdb_path():
     """Create a DuckDB database with fixture data."""
-    import duckdb
     from scripts.load_fixture import load_duckdb
-    
+
     db_path = "/tmp/artha_parity.duckdb"
-    
+
     # Load fixture
     fixture_dir_val = Path("/tmp/artha_parity_fixture")
     if not fixture_dir_val.exists():
         from fixtures.generate_fixture import generate_fixture, write_csvs
+
         data = generate_fixture(seed=42, n_accounts=25, n_transactions_per_account=320)
         write_csvs(data, str(fixture_dir_val))
-    
+
     load_duckdb(db_path, str(fixture_dir_val))
-    
+
     return db_path
 
 
@@ -64,11 +61,3 @@ def mysql_available():
 def mysql_url():
     """MySQL connection URL (if available)."""
     return "mysql://artha:artha@127.0.0.1:3306/artha"
-
-
-@pytest.fixture(scope="session")
-def event_loop():
-    """Create an event loop for async tests."""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()

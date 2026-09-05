@@ -9,13 +9,11 @@ Tests use a fixture with planted boundaries:
 """
 
 import pytest
-from datetime import date
 from decimal import Decimal
 
 from app.query.duckdb_engine import DuckDBQueryEngine
 from app.query.mysql_engine import MySQLQueryEngine
-from app.query.logical_plan import LogicalPlan, Predicate, Sort, DateRangeHalfOpen
-from app.query.sql_render import DuckDBDialect, MySQLDialect, render_sql
+from app.query.logical_plan import LogicalPlan, Predicate
 
 
 @pytest.fixture
@@ -31,22 +29,22 @@ async def duckdb_engine(duckdb_path):
 async def mysql_engine(mysql_available, mysql_url, fixture_dir):
     """MySQL engine fixture (skipped if unavailable)."""
     if not mysql_available:
-        pytest.skip("MySQL not available")
-    
+        pytest.skip()
+
     from scripts.load_fixture import load_mysql
-    
+
     # Load fixture
     success = load_mysql(mysql_url, fixture_dir, clear=True)
     if not success:
-        pytest.skip("Failed to load fixture into MySQL")
-    
+        pytest.skip()
+
     engine = MySQLQueryEngine(mysql_url)
     caps = await engine.discover_capabilities()
     assert "transaction" in caps.tables
     return engine
 
 
-def canonicalize_decimal(value) -> Decimal:
+def canonicalize_decimal(value) -> Decimal | None:
     """Normalize Decimal to 2 decimal places."""
     if value is None:
         return None
@@ -65,11 +63,11 @@ def canonicalize_rows(rows: list[dict]) -> list[dict]:
             if isinstance(val, Decimal):
                 norm[key] = canonicalize_decimal(val)
         normalized.append(norm)
-    
+
     # Sort by transaction_id if present (deterministic ordering)
     if normalized and "transaction_id" in normalized[0]:
         normalized.sort(key=lambda r: r.get("transaction_id", ""))
-    
+
     return normalized
 
 
@@ -82,9 +80,9 @@ async def test_simple_select(duckdb_engine):
         predicates=[],
         limit=10,
     )
-    
+
     result = await duckdb_engine.execute_logical_plan(plan)
-    
+
     assert "rows" in result
     assert len(result["rows"]) <= 10
     assert all("transaction_id" in r for r in result["rows"])
@@ -99,9 +97,9 @@ async def test_where_debit_type(duckdb_engine):
         predicates=[Predicate(column="t.transaction_type", operator="=", value="debit")],
         limit=50,
     )
-    
+
     result = await duckdb_engine.execute_logical_plan(plan)
-    
+
     rows = result["rows"]
     assert all(r["transaction_type"] == "debit" for r in rows)
 
@@ -117,11 +115,12 @@ async def test_where_amount_range(duckdb_engine):
         ],
         limit=50,
     )
-    
+
     result = await duckdb_engine.execute_logical_plan(plan)
-    
+
     rows = result["rows"]
-    assert all(canonicalize_decimal(r["transaction_amount"]) >= Decimal("50000.00") for r in rows)
+    amounts = [canonicalize_decimal(row["transaction_amount"]) for row in rows]
+    assert all(amount is not None and amount >= Decimal("50000.00") for amount in amounts)
 
 
 @pytest.mark.asyncio
@@ -133,9 +132,9 @@ async def test_aggregation_sum(duckdb_engine):
         predicates=[Predicate(column="t.transaction_type", operator="=", value="debit")],
         aggregations={"total_amount": "SUM(t.transaction_amount)"},
     )
-    
+
     result = await duckdb_engine.execute_logical_plan(plan)
-    
+
     rows = result["rows"]
     assert len(rows) == 1
     assert "total_amount" in rows[0]
@@ -150,9 +149,9 @@ async def test_aggregation_count(duckdb_engine):
         predicates=[Predicate(column="t.transaction_type", operator="=", value="debit")],
         aggregations={"count": "COUNT(*)"},
     )
-    
+
     result = await duckdb_engine.execute_logical_plan(plan)
-    
+
     rows = result["rows"]
     assert len(rows) == 1
     assert isinstance(rows[0]["count"], int)
@@ -171,9 +170,9 @@ async def test_group_by_transaction_type(duckdb_engine):
             "cnt": "COUNT(*)",
         },
     )
-    
+
     result = await duckdb_engine.execute_logical_plan(plan)
-    
+
     rows = result["rows"]
     assert len(rows) >= 1  # At least one type
     types = {r["transaction_type"] for r in rows}
@@ -186,12 +185,13 @@ async def test_masking_account_number(duckdb_engine):
     plan = LogicalPlan(
         select_columns=["t.transaction_id", "a.account_number"],
         primary_table="transaction",
+        joins=[("account", "a", "t.account_id = a.account_id")],
         predicates=[],
         limit=5,
     )
-    
+
     result = await duckdb_engine.execute_logical_plan(plan)
-    
+
     rows = result["rows"]
     for row in rows:
         acc_num = row["account_number"]

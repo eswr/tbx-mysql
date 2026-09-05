@@ -87,7 +87,9 @@ class QueryFilters(BaseModel):
     reference_id: str | None = None
     utr_number: str | None = None
     min_amount: Decimal | None = Field(None, ge=0)
+    min_amount_operator: Literal[">", ">="] = ">="
     max_amount: Decimal | None = Field(None, ge=0)
+    max_amount_operator: Literal["<", "<="] = "<="
     
     @field_validator("min_amount", "max_amount", mode="before")
     @classmethod
